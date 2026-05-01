@@ -1,0 +1,45 @@
+import { Controller, UseGuards, Post, Req, Body } from '@nestjs/common';
+import { ApiBearerAuth, ApiTags, ApiOperation } from '@nestjs/swagger';
+import { BookingService } from './booking.service';
+import { CreateBookingDto } from './dto/create-booking-request.dto';
+import { ConfirmBookingDto } from './dto/confirm-booking-request.dto';
+import {
+  AuthenticatedRequest,
+  // AuthenticatedRequest,
+  // BaseController,
+  JwtAuthGuard,
+  Roles,
+  RolesGuard,
+  UserType,
+} from '@Common';
+@ApiTags('booking')
+@ApiBearerAuth()
+@Roles(UserType.ADMIN, UserType.USER)
+@UseGuards(JwtAuthGuard, RolesGuard)
+@Controller('booking')
+export class BookingController {
+  constructor(private readonly bookingService: BookingService) {}
+  getContext(req: AuthenticatedRequest) {
+    return req.user;
+  }
+
+  @Post()
+  // @ApiOperation()
+  createBooking(
+    @Req() req: AuthenticatedRequest,
+    @Body() dto: CreateBookingDto,
+  ) {
+    const ctx = this.getContext(req);
+    return this.bookingService.createBooking(ctx, dto);
+  }
+
+  @Post('confirm')
+  @ApiOperation({ summary: 'Confirm booking' })
+  bookingConfirm(
+    @Req() req: AuthenticatedRequest,
+    @Body() dto: ConfirmBookingDto,
+  ) {
+    const ctx = this.getContext(req);
+    return this.bookingService.confirmBooking(ctx, dto);
+  }
+}

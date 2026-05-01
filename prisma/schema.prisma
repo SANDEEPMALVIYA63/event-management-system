@@ -1,0 +1,351 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+
+enum UserType {
+  USER
+  ADMIN
+  MANAGER
+}
+enum RevenueStatus {
+  PENDING
+  SETTLED
+  REFUNDED
+}
+
+enum AdminStatus {
+  Active @map("active")
+  @@map("admin_status")
+}
+
+enum UserStatus {
+  Active  @map("active")
+  Blocked @map("blocked")
+
+  @@map("user_status")
+}
+
+enum EventStatus {
+  ACTIVE     @map("active")
+  INACTIVE   @map("inactive")
+  SUSPENDED  @map("suspended")
+
+  @@map("event_status")
+}
+
+enum EventType {
+  COMEDY_SHOW
+  MUSIC_SHOW
+  THEATRE
+  SPORTS
+  CONFERENCE
+  WORKSHOP
+}
+
+enum BookingStatus {
+  HOLD       @map("hold")
+  CONFIRMED  @map("confirmed")
+  CANCELLED  @map("cancelled")
+  EXPIRED    @map("expired")
+
+  @@map("booking_status")
+} 
+
+enum TransactionType {
+  CREDIT @map("credit")
+  DEBIT  @map("debit")
+
+  @@map("transaction_type")
+}
+
+model User {
+  id           Int           @id @default(autoincrement())
+  firstname    String
+  lastname     String
+  username     String?       @unique
+  email        String        @unique
+  role         UserType      @default(USER)
+  dialCode     String?       @map("dial_code")
+  mobile       String?       @unique
+  profileImage String?       @map("profile_image")
+  isVerified   Boolean       @default(false) @map("is_verified")
+  country      String?
+  status       UserStatus    @default(Active)
+  createdAt    DateTime      @default(now()) @map("created_at")
+  updatedAt    DateTime      @updatedAt @map("updated_at")
+
+  meta         UserMeta?
+  settings     UserSetting[]
+  wallet       Wallet?  
+  bookings     Booking[]
+  events       Event[]       @relation("ManagerEvents")
+  transactions   Transaction[]
+  @@map("user")
+}
+
+model UserMeta {
+  googleId      String? @unique @map("google_id")
+  passwordSalt  String? @map("password_salt")
+  passwordHash  String? @map("password_hash")
+
+  user          User    @relation(fields: [userId], references: [id])
+  userId        Int     @unique @map("user_id")
+
+  @@map("user_meta")
+}
+
+
+model Admin {
+  id           Int         @id @default(autoincrement())
+  firstname    String
+  lastname     String
+  email        String      @unique
+  profileImage String?     @map("profile_image")
+  status       AdminStatus @default(Active)
+  createdAt    DateTime    @default(now()) @map("created_at")
+  updatedAt    DateTime    @updatedAt @map("updated_at")
+
+  meta         AdminMeta?
+
+  @@map("admin")
+}
+
+model AdminMeta {
+  passwordSalt String? @map("password_salt")
+  passwordHash String? @map("password_hash")
+
+  admin        Admin   @relation(fields: [adminId], references: [id])
+  adminId      Int     @unique @map("admin_id")
+
+  @@map("admin_meta")
+}
+
+
+model Venue {
+  id            String  @id @default(cuid())
+  name          String
+  address       String
+  city          String
+  state         String?
+  country       String  @default("IN")
+  totalCapacity Int
+
+  events         Event[]
+
+  @@map("venues")
+}
+
+model Event {
+  id             Int           @id @default(autoincrement())
+  title          String
+  type           EventType
+  description    String?
+  startTime      DateTime
+  endTime        DateTime
+  venueId        String
+  performers     String
+  ticketPrice    Decimal       @db.Decimal(10, 2)
+  maxTickets     Int
+  ticketsSold    Int           @default(0)
+  status         EventStatus   @default(ACTIVE)
+
+  managerId      Int           @map("manager_id")   
+  manager        User          @relation("ManagerEvents", fields: [managerId], references: [id])
+
+  bookings       Booking[]
+  venue          Venue         @relation(fields: [venueId], references: [id])
+
+  createdAt      DateTime      @default(now()) @map("created_at")
+  updatedAt      DateTime      @updatedAt @map("updated_at")
+  revenueShares  RevenueShare[]
+  @@index([managerId])
+  @@index([status])
+  @@map("event")
+}
+
+model Booking {
+  id            Int            @id @default(autoincrement())
+  userId        Int            @map("user_id")
+  eventId       Int            @map("event_id")
+  quantity      Int
+  totalPrice    Decimal        @db.Decimal(10,2) 
+ 
+  status        BookingStatus
+  holdExpiresAt DateTime?      @map("hold_expires_at")
+
+  user          User           @relation(fields: [userId], references: [id])
+  event         Event          @relation(fields: [eventId], references: [id])
+ 
+  revenueShare  RevenueShare?
+  transactions  Transaction[]  @relation("BookingToTransaction")
+  createdAt     DateTime       @default(now()) @map("created_at")
+
+  @@index([userId])
+  @@index([eventId])
+  @@index([holdExpiresAt])
+  @@map("booking")
+}
+
+model RevenueShare {
+  id            String   @id @default(cuid())
+
+  bookingId     Int      @unique
+  eventId       Int
+  managerId     Int
+
+  totalAmount   Decimal  @db.Decimal(10, 2)
+
+  adminPercent  Decimal  @db.Decimal(5,2) 
+  managerPercent Decimal @db.Decimal(5,2) 
+  adminShare    Decimal  @db.Decimal(10, 2)
+  managerShare  Decimal  @db.Decimal(10, 2)
+
+  status        RevenueStatus 
+
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  booking       Booking  @relation(fields: [bookingId], references: [id])
+ event   Event   @relation(fields: [eventId], references: [id]) 
+  @@index([managerId])
+  @@index([eventId])
+  @@index([status])
+  @@map("revenue_shares")
+}
+
+model Wallet {
+  id        Int     @id @default(autoincrement())
+  userId    Int     @unique @map("user_id")
+  balance Decimal   @db.Decimal(10, 2) @default(1000)
+
+  user        User          @relation(fields: [userId], references: [id])
+  transactions Transaction[]
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@map("wallet")
+}
+
+model Transaction {
+  id          Int             @id @default(autoincrement())
+  walletId    Int             @map("wallet_id")
+  userId      Int             @map("user_id")   
+  bookingId   Int?            @map("booking_id")
+  amount      Int
+  type        TransactionType
+  description String
+  
+  wallet      Wallet          @relation(fields: [walletId], references: [id])
+  user        User            @relation(fields: [userId], references: [id]) 
+
+  booking     Booking?        @relation("BookingToTransaction", fields: [bookingId], references: [id]) // ✅ SAME NAME
+  createdAt   DateTime        @default(now()) @map("created_at")
+
+  @@index([walletId])
+  @@index([userId])
+  @@index([bookingId])
+  @@map("transaction")
+}
+
+enum OtpTransport {
+  Email  @map("email")
+  Mobile @map("mobile")
+
+  @@map("otp_transport")
+}
+
+model Otp {
+  code             String
+  attempt          Int      @default(1) @db.SmallInt
+  lastSentAt       DateTime @default(now()) @map("last_sent_at")
+  retries          Int      @default(0) @db.SmallInt
+  transport        OtpTransport
+  target           String
+  lastCodeVerified Boolean  @default(false) @map("last_code_verified")
+  blocked          Boolean  @default(false)
+
+  @@unique([transport, target])
+  @@map("otp")
+}
+
+enum SettingType {
+  Binary       @map("binary")
+  MultiSelect  @map("multi_select")
+  SingleSelect @map("single_select")
+
+  @@map("setting_type")
+}
+
+enum SettingContext {
+  User   @map("user")
+  System @map("System")
+
+  @@map("setting_context")
+}
+
+model Setting {
+  id               Int             @id @default(autoincrement())
+  mappedTo         String          @map("mapped_to")
+  text             String          @default("")
+  description      String          @default("")
+  type             SettingType
+  context          SettingContext
+  default          Json
+  isDefinedOptions Boolean         @map("is_defined_options")
+
+  subSettings      Setting[]       @relation("SubSettings")
+  dependsOn        Setting?        @relation("SubSettings", fields: [parentId], references: [id])
+  parentId         Int?            @map("parent_id")
+
+  options          SettingOption[]
+  userSettings     UserSetting[]
+  systemSettings   SystemSetting[]
+
+  @@unique([context, mappedTo])
+  @@map("setting")
+}
+
+model SettingOption {
+  id        Int     @id @default(autoincrement())
+  text      String  @default("")
+  value     String
+
+  setting   Setting @relation(fields: [settingId], references: [id])
+  settingId Int     @map("setting_id")
+
+  @@unique([settingId, value])
+  @@map("setting_option")
+}
+
+model UserSetting {
+  selection Json
+
+  user      User    @relation(fields: [userId], references: [id])
+  userId    Int     @map("user_id")
+
+  setting   Setting @relation(fields: [settingId], references: [id])
+  settingId Int     @map("setting_id")
+
+  @@id([userId, settingId])
+  @@map("user_setting")
+}
+
+model SystemSetting {
+  selection Json
+
+  setting   Setting @relation(fields: [settingId], references: [id])
+  settingId Int     @map("setting_id")
+
+  @@id([settingId])
+  @@map("system_setting")
+}
