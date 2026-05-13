@@ -60,6 +60,8 @@ export class JwtStrategy extends PassportStrategy(Strategy, JWT_AUTH) {
   async validate(
     payload: JwtPayload & { readonly iat: number; readonly exp: number },
   ): Promise<AuthenticatedUser> {
+    console.log('jwt stategy ', payload.sub, payload.type);
+
     return {
       id: payload.sub,
       type: payload.type,

@@ -22,8 +22,20 @@ async function main() {
         admin.meta?.create?.passwordHash &&
         admin.meta.create.passwordSalt
       ) {
-        await prisma.admin.create({
+        const adminDetails = await prisma.admin.create({
           data: admin,
+        });
+        console.log('admin in seed ', adminDetails);
+
+        if (!adminDetails) {
+          throw new Error('admin details not found ');
+        }
+        const WalletInitialBalance = 10;
+        await prisma.adminWallet.create({
+          data: {
+            adminId: adminDetails.id,
+            balance: WalletInitialBalance,
+          },
         });
       } else {
         console.error(new Error('Invalid default admin credentials found'));

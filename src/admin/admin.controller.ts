@@ -11,12 +11,7 @@ import {
   ParseIntPipe,
 } from '@nestjs/common';
 import { Request } from 'express';
-import {
-  ApiBearerAuth,
-  ApiTags,
-  ApiOperation,
-  ApiParam,
-} from '@nestjs/swagger';
+import { ApiBearerAuth, ApiTags, ApiParam } from '@nestjs/swagger';
 import { UserStatus } from '../generated/prisma/client';
 import {
   AccessGuard,
@@ -34,14 +29,12 @@ import {
   UpdateProfileDetailsRequestDto,
   UpdateProfileImageRequestDto,
   ChangeRoleDto,
-  ChangeStatusDto,
-  // UpdateUserStatusDto,
 } from './dto';
 
 @ApiTags('Admin')
 @ApiBearerAuth()
 @Roles(UserType.ADMIN)
-@UseGuards(JwtAuthGuard, RolesGuard)
+@UseGuards(JwtAuthGuard, AccessGuard, RolesGuard)
 @Controller('admin')
 export class AdminController extends BaseController {
   constructor(private readonly adminService: AdminService) {
@@ -102,6 +95,13 @@ export class AdminController extends BaseController {
     return { status: 'success' };
   }
 
+  @Get('admin-Wallet')
+  @Roles(UserType.ADMIN)
+  async adminWallet(@Req() req: AuthenticatedRequest) {
+    const ctx = this.getContext(req);
+    return this.adminService.getAdminWallet(ctx.user.id);
+  }
+
   @Patch('change-role')
   @Roles(UserType.ADMIN)
   @ApiParam({ name: 'role', enum: UserType })
@@ -109,6 +109,7 @@ export class AdminController extends BaseController {
     @Req() req: Request & { user: { id: number; role: UserType } },
     @Body() dto: ChangeRoleDto,
   ) {
+    console.log('ChangeRoleDto', ChangeRoleDto);
     return this.adminService.setRole(req.user.id, dto.userId, dto.role);
   }
 
@@ -119,8 +120,7 @@ export class AdminController extends BaseController {
     @Param('userId', ParseIntPipe) userId: number,
     @Param('status', new ParseEnumPipe(UserStatus)) status: UserStatus,
   ) {
-    await this.adminService.setUserStatus(userId, status);
-    return { status: 'success' };
+    return await this.adminService.setUserStatus(userId, status);
   }
 
   @ApiBearerAuth()

@@ -176,6 +176,7 @@ export class AuthController extends BaseController {
     @Req() req: Request & { user: ValidatedUser },
     @Res({ passthrough: true }) res: Response,
   ) {
+    console.log('  req.user.id req.user.type', req.user.id, req.user.type);
     const { accessToken, expiresIn, type } = await this.authService.login(
       req.user.id,
       req.user.type,

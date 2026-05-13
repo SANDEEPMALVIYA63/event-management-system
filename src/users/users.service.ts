@@ -163,7 +163,7 @@ export class UsersService {
     const user = await this.getByEmail(email);
 
     if (!user) return null;
-    if (user.status !== UserStatus.Active) {
+    if (user.status !== UserStatus.ACTIVE) {
       throw new Error(
         'Your account has been temporarily suspended/blocked by the system. Please contact customer support for assistance',
       );
@@ -199,7 +199,7 @@ export class UsersService {
     password?: string;
     dialCode?: string;
     mobile?: string;
-    country?: string;
+    country: string;
     googleId?: string;
     profileImage?: string;
   }): Promise<User> {
@@ -240,6 +240,7 @@ export class UsersService {
       const wallet = await tx.wallet.create({
         data: {
           userId: user.id,
+          // role: user.role,
           balance: WalletInitialBalance,
         },
       });
@@ -248,6 +249,7 @@ export class UsersService {
         data: {
           walletId: wallet.id,
           userId: user.id,
+          // role: user.role,
           amount: WalletInitialBalance,
           type: TransactionType.CREDIT,
           description: TrandactionDescription.WELCOME_BONUS,
@@ -264,6 +266,8 @@ export class UsersService {
     firstname?: string;
     lastname?: string;
     profileImage?: string;
+    country?: string;
+    // country: string;
   }): Promise<ValidatedUser> {
     let user = await this.prisma.user.findFirst({
       where: {
@@ -292,6 +296,7 @@ export class UsersService {
           email: data.email,
           profileImage: data.profileImage,
           googleId: data.googleId,
+          country: data.country ?? '',
         });
       }
     }
@@ -634,6 +639,7 @@ export class UsersService {
       orderBy: { createdAt: 'desc' },
       select: {
         id: true,
+        userId: true,
         quantity: true,
         totalPrice: true,
         status: true,
@@ -649,7 +655,9 @@ export class UsersService {
             venue: {
               select: {
                 name: true,
+                state: true,
                 city: true,
+                address: true,
                 country: true,
               },
             },
@@ -657,10 +665,18 @@ export class UsersService {
         },
         transactions: {
           select: {
+            wallet: true,
+            userId: true,
             amount: true,
             type: true,
             description: true,
             createdAt: true,
+            user: {
+              select: {
+                firstname: true,
+                lastname: true,
+              },
+            },
           },
           orderBy: { createdAt: 'desc' },
         },
@@ -671,11 +687,15 @@ export class UsersService {
       return { success: true, total: 0, data: [] };
     }
 
+    // console.log('bookings', bookings);
+
     const userBookingDitails = bookings.map((booking) => {
       const venue = {
         name: booking.event.venue.name,
-        city: booking.event.venue.city,
         country: booking.event.venue.country,
+        state: booking.event.venue.state,
+        city: booking.event.venue.city,
+        address: booking.event.venue.address,
       };
 
       const event = {
@@ -688,6 +708,10 @@ export class UsersService {
       };
 
       const payments = booking.transactions.map((tx) => ({
+        firstname: tx.user.firstname,
+        lastname: tx.user.lastname,
+        userId: tx.userId,
+        walletId: tx.wallet,
         type: tx.type,
         amount: tx.amount,
         description: tx.description,
@@ -696,6 +720,7 @@ export class UsersService {
 
       return {
         bookingId: booking.id,
+        userId: booking.userId,
         status: booking.status,
         quantity: booking.quantity,
         totalPrice: Number(booking.totalPrice),

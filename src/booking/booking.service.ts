@@ -3,10 +3,9 @@ import {
   Injectable,
   BadRequestException,
   NotFoundException,
-  ForbiddenException,
+  Logger,
 } from '@nestjs/common';
-import { CreateBookingDto } from './dto/create-booking-request.dto';
-import { AuthenticatedUser, UserType } from '@Common';
+import { AuthenticatedUser } from '@Common';
 import { PrismaService } from '../prisma';
 import {
   BookingStatus,
@@ -14,18 +13,40 @@ import {
   EventStatus,
   TransactionType,
 } from 'src/generated/prisma/enums';
-import { ConfirmBookingDto } from './dto/confirm-booking-request.dto';
-import { CancelBookingDto } from './dto/cancel-booking-request.dto';
+import { ConfirmBookingDto, CreateBookingDto } from './dto';
 import { ConfigType } from '@nestjs/config';
 import { appConfigFactory } from '@Config';
-
+import { Cron, CronExpression } from '@nestjs/schedule';
+import { PaymentService } from '../payment/payment.service';
 @Injectable()
 export class BookingService {
+  private readonly logger = new Logger(BookingService.name);
+
   constructor(
     private readonly prisma: PrismaService,
+    private PaymentService: PaymentService,
     @Inject(appConfigFactory.KEY)
     private appConfig: ConfigType<typeof appConfigFactory>,
   ) {}
+
+  @Cron(CronExpression.EVERY_MINUTE)
+  async releaseExpiredHolds() {
+    const now = new Date();
+
+    const result = await this.prisma.booking.updateMany({
+      where: {
+        status: BookingStatus.HOLD,
+        holdExpiresAt: { lte: now },
+      },
+      data: {
+        status: BookingStatus.EXPIRED,
+      },
+    });
+
+    if (result.count > 0) {
+      this.logger.log(`${result.count} expired holds release kiye`);
+    }
+  }
 
   async createBooking(ctx: AuthenticatedUser, dto: CreateBookingDto) {
     return await this.prisma.$transaction(async (tx) => {
@@ -34,15 +55,20 @@ export class BookingService {
       });
 
       if (!event) {
-        throw new NotFoundException('event not fount ');
+        throw new NotFoundException('Event not found');
       }
 
       if (event.status !== EventStatus.ACTIVE) {
         throw new BadRequestException('Event is not active');
       }
+
       const now = new Date();
       if (event.startTime <= now) {
         throw new BadRequestException('Event already started');
+      }
+
+      if (dto.quantity <= 0) {
+        throw new BadRequestException('Invalid quantity');
       }
 
       const todayStart = new Date();
@@ -60,23 +86,13 @@ export class BookingService {
           createdAt: { gte: todayStart, lte: todayEnd },
         },
       });
-
-      // if (isNaN(this.appConfig.maxTicketsPerDay)) {
-      //   throw new Error('Invalid env config');
-      // }
-      // console.log('Full appConfig:', this.appConfig);
       const maxTicketsPerDay = Number(this.appConfig.maxTicketsPerDay);
-      // console.log('maxTicketsPerDay', maxTicketsPerDay);
-
       const alreadyBookedToday = Number(todayBookings._sum.quantity ?? 0);
-      // console.log('alreadyBookedToday', alreadyBookedToday);
 
       if (alreadyBookedToday + dto.quantity > maxTicketsPerDay) {
-        const remaining = maxTicketsPerDay - alreadyBookedToday;
-        throw new BadRequestException(
-          remaining <= 0
-            ? 'Aap aaj is event ke liye aur ticket nahi le sakte'
-            : `Aap aaj sirf ${remaining} aur ticket le sakte hain`,
+        // const remaining = maxTicketsPerDay - alreadyBookedToday;
+        throw new Error(
+          `You can only book a maximum of ${maxTicketsPerDay} tickets per day for this event`,
         );
       }
 
@@ -88,18 +104,15 @@ export class BookingService {
           holdExpiresAt: { gt: now },
         },
       });
-      const confirmedTickets = event.ticketsSold;
 
-      const totalHold = holdTickets._sum.quantity || 0;
-      const totalTickets = confirmedTickets + totalHold;
+      const totalHold = Number(holdTickets._sum.quantity ?? 0);
+      const totalTickets = event.ticketsSold + totalHold;
       const availableTickets = event.maxTickets - totalTickets;
 
-      if (dto.quantity >= availableTickets) {
-        throw new BadRequestException('Not enough tickets available');
+      if (dto.quantity > availableTickets) {
+        throw new Error('Not enough tickets available');
       }
-      if (dto.quantity <= 0) {
-        throw new BadRequestException('Invalid quantity');
-      }
+
       const price = Number(event.ticketPrice);
       const totalPrice = dto.quantity * price;
 
@@ -116,6 +129,7 @@ export class BookingService {
           holdExpiresAt: holdExpiresAt,
         },
       });
+
       return booking;
     });
   }
@@ -137,24 +151,22 @@ export class BookingService {
         },
       });
 
-      console.log('booking in booking confirm ', booking);
-
       if (!booking) {
-        throw new NotFoundException('Booking not found');
+        throw new Error('Booking not found');
       }
       if (booking.userId !== ctx.id) {
-        throw new ForbiddenException('Unauthorized');
+        throw new Error('Unauthorized');
       }
 
       if (booking.status !== BookingStatus.HOLD) {
-        throw new BadRequestException('Invalid booking status');
+        throw new Error('Invalid booking status');
       }
 
       const isExpired =
         !booking.holdExpiresAt || booking.holdExpiresAt < new Date();
 
       if (isExpired) {
-        throw new BadRequestException('Hold expired');
+        throw new Error('Hold expired');
       }
 
       const totalBooked = await tx.booking.aggregate({
@@ -168,19 +180,19 @@ export class BookingService {
       const totalConfirmed = totalBooked._sum.quantity || 0;
 
       if (totalConfirmed + booking.quantity > booking.event.maxTickets) {
-        throw new BadRequestException('Tickets sold out');
+        throw new Error('Tickets sold out');
       }
       if (!booking.user.wallet) {
-        throw new BadRequestException('Wallet not found');
+        throw new Error('Wallet not found');
       }
 
       const walletBalance = Number(booking.user.wallet.balance);
       const totalPrice = Number(booking.totalPrice);
 
       if (walletBalance < totalPrice) {
-        throw new BadRequestException('Insufficient wallet balance');
+        throw new Error('Insufficient wallet balance');
       }
-      // console.log('hello1');
+
       await tx.wallet.update({
         where: { userId: ctx.id },
         data: {
@@ -229,11 +241,9 @@ export class BookingService {
 
       const adminPercent = this.appConfig.adminPercent;
       const managerPercent = this.appConfig.managerPercent;
-      // const platformFee = this.appConfig.platformFee;
 
       const adminShare = (totalAmount * adminPercent) / 100;
       const managerShare = (totalAmount * managerPercent) / 100;
-      // const platformFeeAmount = (totalAmount * platformFee) / 100;
 
       if (adminPercent + managerPercent !== 100) {
         throw new Error('Invalid revenue config');
@@ -241,7 +251,6 @@ export class BookingService {
       await tx.revenueShare.create({
         data: {
           bookingId: booking.id,
-          managerId: booking.event.managerId,
           eventId: booking.eventId,
           totalAmount: booking.totalPrice,
           adminPercent: adminPercent,
@@ -251,7 +260,7 @@ export class BookingService {
           status: RevenueStatus.SETTLED,
         },
       });
-
+      await this.PaymentService.creditAdminShare(adminShare, booking.id);
       return {
         message: 'Booking confirmed successfully',
         booking: updatedBooking,
@@ -260,43 +269,43 @@ export class BookingService {
     });
   }
 
-  async cancelBooking(ctx: AuthenticatedUser, dto: CancelBookingDto) {
-    return this.prisma.$transaction(async (tx) => {
-      const booking = await tx.booking.findUnique({
-        where: { id: dto.bookingId },
-      });
+  // async cancelBooking(ctx: AuthenticatedUser, dto: CancelBookingDto) {
+  //   return this.prisma.$transaction(async (tx) => {
+  //     const booking = await tx.booking.findUnique({
+  //       where: { id: dto.bookingId },
+  //     });
 
-      if (!booking) {
-        throw new NotFoundException('Booking not found');
-      }
+  //     if (!booking) {
+  //       throw new NotFoundException('Booking not found');
+  //     }
 
-      if (
-        booking.userId !== ctx.id &&
-        ctx.type !== UserType.ADMIN &&
-        ctx.type !== UserType.MANAGER
-      ) {
-        throw new ForbiddenException('You cannot cancel this booking');
-      }
+  //     if (
+  //       booking.userId !== ctx.id &&
+  //       ctx.type !== UserType.ADMIN &&
+  //       ctx.type !== UserType.MANAGER
+  //     ) {
+  //       throw new ForbiddenException('You cannot cancel this booking');
+  //     }
 
-      if (booking.status === BookingStatus.CANCELLED) {
-        throw new BadRequestException('Booking already cancelled');
-      }
+  //     if (booking.status === BookingStatus.CANCELLED) {
+  //       throw new BadRequestException('Booking already cancelled');
+  //     }
 
-      if (booking.status === BookingStatus.EXPIRED) {
-        throw new BadRequestException('Booking already EXPIRED ');
-      }
+  //     if (booking.status === BookingStatus.EXPIRED) {
+  //       throw new BadRequestException('Booking already EXPIRED ');
+  //     }
 
-      const update = await tx.booking.update({
-        where: { id: dto.bookingId },
-        data: {
-          status: BookingStatus.CANCELLED,
-        },
-      });
+  //     const update = await tx.booking.update({
+  //       where: { id: dto.bookingId },
+  //       data: {
+  //         status: BookingStatus.CANCELLED,
+  //       },
+  //     });
 
-      return {
-        message: 'Booking cancelled successfully',
-        update,
-      };
-    });
-  }
+  //     return {
+  //       message: 'Booking cancelled successfully',
+  //       update,
+  //     };
+  //   });
+  // }
 }

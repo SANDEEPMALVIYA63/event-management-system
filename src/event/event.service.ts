@@ -1,15 +1,12 @@
 import {
   Injectable,
   NotFoundException,
-  // Req,
   BadRequestException,
-  ForbiddenException,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma';
 import { CreateEventDto } from './dto/create-event-request.dto';
 import { EventStatus } from 'src/generated/prisma/enums';
-import { AuthenticatedUser, UserType } from '@Common';
-// import { updateEventDto } from './dto/update-event-request.dto';
+import { AuthenticatedUser } from '@Common';
 import { UpdateEventStatusDto } from './dto/UpdateEventStatusDto-request.dto';
 
 @Injectable()
@@ -19,6 +16,9 @@ export class EventService {
   async createEvent(ctx: AuthenticatedUser, dto: CreateEventDto) {
     const venue = await this.prisma.venue.findUnique({
       where: { id: dto.venueId },
+      include: {
+        events: true,
+      },
     });
     if (!venue) {
       throw new NotFoundException('Venue not found');
@@ -37,37 +37,32 @@ export class EventService {
       throw new BadRequestException('Tickets exceed venue capacity');
     }
 
-    return this.prisma.event.create({
+    const event = await this.prisma.event.create({
       data: {
         title: dto.title,
         type: dto.type,
         description: dto.description,
-        startTime: new Date(dto.startTime),
-        endTime: new Date(dto.endTime),
+        eventDate: dto.eventDate,
+        startTime: dto.startTime,
+        endTime: dto.endTime,
         performers: dto.performers,
         ticketPrice: dto.ticketPrice,
         maxTickets: dto.maxTickets,
         venue: {
           connect: { id: dto.venueId },
         },
-        manager: {
-          connect: { id: ctx.id },
-        },
+        // manager: {
+        //   connect: { id: ctx.id },
+        // },
 
         status: EventStatus.ACTIVE,
       },
       include: {
         venue: true,
-        manager: {
-          select: {
-            id: true,
-            firstname: true,
-            lastname: true,
-            email: true,
-          },
-        },
       },
     });
+
+    return event;
   }
 
   // async updateEvent(
@@ -216,9 +211,9 @@ export class EventService {
   }
 
   async findAllEvents() {
-    return this.prisma.event.findMany({
+    const event = this.prisma.event.findMany({
       orderBy: {
-        createdAt: 'desc', // latest events first
+        createdAt: 'desc',
       },
       include: {
         venue: {
@@ -241,6 +236,12 @@ export class EventService {
         },
       },
     });
+
+    if (!event) {
+      throw new NotFoundException('event is not found ');
+    }
+
+    return event;
   }
 
   async updateEventStatus(
@@ -259,27 +260,26 @@ export class EventService {
         throw new NotFoundException('Event not found');
       }
 
-      if (ctx.type === UserType.MANAGER) {
-        const allowedStatuses: EventStatus[] = [
-          EventStatus.ACTIVE,
-          EventStatus.SUSPENDED,
-        ];
-        if (!allowedStatuses.includes(dto.status)) {
-          throw new ForbiddenException(
-            'Manager sirf Active ya Blocked kar sakta hai',
-          );
-        }
+      // if (ctx.type === UserType.MANAGER) {
+      // const allowedStatuses: EventStatus[] = [
+      //   EventStatus.ACTIVE,
+      //   EventStatus.SUSPENDED,
+      // ];
+      // if (!allowedStatuses.includes(dto.status)) {
+      //   throw new ForbiddenException(
+      //     'Manager sirf Active ya Blocked kar sakta hai',
+      //   );
+      // }
 
-        const updated = await tx.event.update({
-          where: { id: eventId },
-          data: { status: dto.status },
-        });
+      const updated = await tx.event.update({
+        where: { id: eventId },
+        data: { status: dto.status },
+      });
 
-        return {
-          message: `Event ${dto.status} kar diya gaya`,
-          event: updated,
-        };
-      }
+      return {
+        message: `Event ${dto.status} update successfully`,
+        event: updated,
+      };
     });
   }
 }

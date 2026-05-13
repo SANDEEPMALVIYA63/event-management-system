@@ -4,6 +4,7 @@ import { BookingService } from './booking.service';
 import { CreateBookingDto } from './dto/create-booking-request.dto';
 import { ConfirmBookingDto } from './dto/confirm-booking-request.dto';
 import {
+  AccessGuard,
   AuthenticatedRequest,
   // AuthenticatedRequest,
   // BaseController,
@@ -14,8 +15,8 @@ import {
 } from '@Common';
 @ApiTags('booking')
 @ApiBearerAuth()
-@Roles(UserType.ADMIN, UserType.USER)
-@UseGuards(JwtAuthGuard, RolesGuard)
+@Roles(UserType.USER)
+@UseGuards(JwtAuthGuard, AccessGuard, RolesGuard)
 @Controller('booking')
 export class BookingController {
   constructor(private readonly bookingService: BookingService) {}

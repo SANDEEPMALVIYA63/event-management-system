@@ -1,8 +1,8 @@
 import { Prisma } from '../../src/generated/prisma/client';
 
 export const admin: Prisma.AdminCreateInput = {
-  firstname: '',
-  lastname: '',
+  firstname: 'Sandeep',
+  lastname: 'Malviya',
   email: process.env.ADMIN_EMAIL || '',
   meta: {
     create: {

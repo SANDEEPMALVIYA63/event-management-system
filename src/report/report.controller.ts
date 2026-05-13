@@ -6,23 +6,23 @@ import {
   Roles,
   UserType,
   AuthenticatedRequest,
+  AccessGuard,
 } from '@Common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 
 @ApiTags('Report')
 @ApiBearerAuth()
 @Roles(UserType.ADMIN, UserType.MANAGER)
-@UseGuards(JwtAuthGuard, RolesGuard)
+@UseGuards(JwtAuthGuard, AccessGuard, RolesGuard)
 @Controller('report')
 export class ReportController {
   constructor(private readonly reportService: ReportService) {}
 
   @Get('ManagerTotalEarning')
-  @Roles(UserType.ADMIN, UserType.MANAGER)
   getRevenueReport(
     @Req() req: AuthenticatedRequest,
     // @Query() dto: ReportQueryDto,
   ) {
-    return this.reportService.getRevenueReport(req.user.id);
+    return this.reportService.getRevenueReport(req.user.id, req.user.type);
   }
 }

@@ -1,12 +1,6 @@
 import { join } from 'node:path';
 import { Cache } from 'cache-manager';
-import {
-  Inject,
-  Injectable,
-  ForbiddenException,
-  NotFoundException,
-  BadRequestException,
-} from '@nestjs/common';
+import { Inject, Injectable, NotFoundException } from '@nestjs/common';
 import { ConfigType } from '@nestjs/config';
 import { CACHE_MANAGER } from '@nestjs/cache-manager';
 import { adminConfigFactory } from '@Config';
@@ -25,12 +19,7 @@ import {
   User,
   UserStatus,
 } from '../generated/prisma/client';
-import {
-  AdminStatus,
-  // BookingStatus,
-  RevenueStatus,
-} from '../generated/prisma/enums';
-import { UpdateUserStatusDto } from './dto/UpdateUserStatusDto-request.dto';
+import { AdminStatus, RevenueStatus } from '../generated/prisma/enums';
 @Injectable()
 export class AdminService {
   constructor(
@@ -112,7 +101,7 @@ export class AdminService {
   ): Promise<ValidatedUser | false | null> {
     const admin = await this.getByEmail(email);
     if (!admin) return null;
-    if (admin.status !== AdminStatus.Active) {
+    if (admin.status !== AdminStatus.ACTIVE) {
       throw new Error(
         'Your account has been temporarily suspended/blocked by the system',
       );
@@ -240,8 +229,15 @@ export class AdminService {
   }
 
   async setStatus(userId: number, status: AdminStatus): Promise<Admin> {
+    const existingUser = await this.prisma.user.findUnique({
+      where: { id: userId },
+    });
+
+    if (!existingUser) {
+      throw new Error('User not found');
+    }
     await this.cacheManager.del(
-      getAccessGuardCacheKey({ id: userId, type: UserType.ADMIN }),
+      getAccessGuardCacheKey({ id: userId, type: existingUser.role }),
     );
     return await this.prisma.admin.update({
       data: { status },
@@ -250,18 +246,23 @@ export class AdminService {
       },
     });
   }
-
   async setRole(
     adminId: number,
     userId: number,
     role: UserType,
   ): Promise<User> {
     if (adminId === userId) {
-      throw new ForbiddenException('Admin cannot change their own role');
+      throw new Error('Admin cannot change their own role');
     }
+    const existingUser = await this.prisma.user.findUnique({
+      where: { id: userId },
+    });
 
+    if (!existingUser) {
+      throw new NotFoundException('User not found');
+    }
     await this.cacheManager.del(
-      getAccessGuardCacheKey({ id: userId, type: UserType.USER }),
+      getAccessGuardCacheKey({ id: userId, type: existingUser.role }),
     );
 
     return await this.prisma.user.update({
@@ -269,17 +270,18 @@ export class AdminService {
       where: { id: userId },
     });
   }
-
   async setUserStatus(userId: number, status: UserStatus): Promise<User> {
     await this.cacheManager.del(
       getAccessGuardCacheKey({ id: userId, type: UserType.USER }),
     );
-    return await this.prisma.user.update({
+    const user = await this.prisma.user.update({
       data: { status },
       where: {
         id: userId,
       },
     });
+
+    return user;
   }
   // async updateUserStatus(UserId: number, dto: UpdateUserStatusDto) {
   //   return this.prisma.$transaction(async (tx) => {
@@ -348,12 +350,13 @@ export class AdminService {
         id: true,
       },
     });
-
+    console.log('eventBreakdown', eventBreakdown);
     const eventIds = eventBreakdown.map((e) => e.eventId);
     const events = await this.prisma.event.findMany({
       where: { id: { in: eventIds } },
       select: { id: true, title: true },
     });
+    console.log('events', events);
 
     const breakdown = eventBreakdown.map((item) => ({
       eventId: item.eventId,
@@ -365,10 +368,26 @@ export class AdminService {
     }));
 
     return {
-      AdmintotalEarnings: result._sum.adminShare ?? 0,
+      AdminTotalEarnings: result._sum.adminShare ?? 0,
       PlatformTotalRevenue: result._sum.totalAmount ?? 0,
       totalBookings: result._count.id ?? 0,
       breakdown,
+    };
+  }
+
+  async getAdminWallet(adminId: number) {
+    const adminWallet = await this.prisma.adminWallet.findUnique({
+      where: {
+        id: adminId,
+      },
+    });
+
+    if (!adminWallet) {
+      throw new Error('admin wallet not found ');
+    }
+
+    return {
+      adminWallet,
     };
   }
 }

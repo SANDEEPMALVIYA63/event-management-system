@@ -1,4 +1,3 @@
-// import { BaseController } from "@Common";
 import {
   Body,
   Controller,
@@ -11,16 +10,11 @@ import {
   ParseIntPipe,
 } from '@nestjs/common';
 import { EventService } from './event.service';
-import { CreateEventDto } from './dto/create-event-request.dto';
-
+import { CreateEventDto, UpdateEventStatusDto } from './dto';
 import { ApiBearerAuth, ApiTags, ApiOperation } from '@nestjs/swagger';
-import { updateEventDto } from './dto/update-event-request.dto';
-import { UpdateEventStatusDto } from './index';
 import {
-  // AccessGuard,
+  AccessGuard,
   AuthenticatedRequest,
-  // AuthenticatedRequest,
-  // BaseController,
   JwtAuthGuard,
   Roles,
   RolesGuard,
@@ -37,10 +31,9 @@ export class EventController {
   getContext(req: AuthenticatedRequest) {
     return req.user;
   }
-
   @Post()
   @Roles(UserType.ADMIN, UserType.MANAGER)
-  @UseGuards(JwtAuthGuard, RolesGuard)
+  @UseGuards(JwtAuthGuard, AccessGuard, RolesGuard)
   @ApiOperation({ summary: 'Create event' })
   createEvent(@Req() req: AuthenticatedRequest, @Body() dto: CreateEventDto) {
     const ctx = this.getContext(req);
@@ -49,9 +42,7 @@ export class EventController {
 
   @Roles(UserType.ADMIN, UserType.MANAGER, UserType.USER)
   @Get()
-  // @Roles(UserType.Admin, UserType.Manager, UserType.User) // sab dekh sakte hain
   @ApiOperation({ summary: 'Get all events' })
-  // @ApiResponse({ status: 200, description: "List of events" })
   async findAllEvents() {
     return this.eventService.findAllEvents();
   }
@@ -77,7 +68,7 @@ export class EventController {
   @Patch(':id/status')
   @Roles(UserType.ADMIN, UserType.MANAGER)
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @ApiOperation({ summary: 'update events' })
+  @ApiOperation({ summary: 'update events status ' })
   async updateEventStatus(
     @Req() req: AuthenticatedRequest,
     @Param('id', ParseIntPipe) eventId: number,

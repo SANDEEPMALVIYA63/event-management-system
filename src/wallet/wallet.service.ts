@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma';
 
 @Injectable()
@@ -8,9 +8,17 @@ export class WalletService {
   async getWallet(userId: number) {
     const wallet = await this.prisma.wallet.findUnique({
       where: { userId },
+      include: {
+        user: true,
+      },
     });
-
-    return wallet;
+    if (!wallet) {
+      throw new NotFoundException('wallet is not found ');
+    }
+    return {
+      wallet,
+      user: wallet.user.role,
+    };
   }
 
   async getTransactions(userId: number) {
@@ -18,11 +26,13 @@ export class WalletService {
       where: {
         wallet: { userId },
       },
-
       orderBy: {
         createdAt: 'desc',
       },
     });
+    if (!transactions) {
+      throw new NotFoundException('transaction is not found ');
+    }
 
     return transactions;
   }

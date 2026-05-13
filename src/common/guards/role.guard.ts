@@ -6,7 +6,6 @@ import { UserType } from '@Common';
 export const ROLES_KEY = 'roles';
 
 export const Roles = (...roles: UserType[]) => SetMetadata(ROLES_KEY, roles);
-console.log('Roles in role guars', Roles);
 
 @Injectable()
 export class RolesGuard implements CanActivate {
@@ -18,24 +17,25 @@ export class RolesGuard implements CanActivate {
       context.getHandler(),
       context.getClass(),
     ]);
-    console.log(roles);
+    // console.log('hello');
+    // console.log(roles);
     if (!roles) {
-      return false;
+      return true;
     }
 
-    console.log('roles role guards file ', roles); // manager
+    // console.log('roles role guards file ', roles); // manager 
 
     const request = context.switchToHttp().getRequest();
-    console.log('request', request.user); // admin
+    // console.log('request', request.user); // admin
 
     if (!request.user.type) return false;
     return this.validateRoles(roles, request.user.type);
   }
 
   validateRoles(roles: string[], userRole: string) {
-    console.log(
-      `validateRoles in role guard  roles ${roles} userRole    ${userRole},`,
-    );
+    // console.log(
+    //   `validateRoles in role guard  roles ${roles} userRole    ${userRole},`,
+    // );
 
     return roles.some((role) => userRole.toLowerCase() === role.toLowerCase());
   }

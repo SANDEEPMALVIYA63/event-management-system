@@ -1,1 +1,1 @@
-export * from "./wallet.constants";
+export * from './wallet.constants';

@@ -24,13 +24,13 @@ enum RevenueStatus {
 }
 
 enum AdminStatus {
-  Active @map("active")
+  ACTIVE @map("active")
   @@map("admin_status")
 }
 
 enum UserStatus {
-  Active  @map("active")
-  Blocked @map("blocked")
+  ACTIVE  @map("active")
+  BLOCKED @map("blocked")
 
   @@map("user_status")
 }
@@ -79,8 +79,8 @@ model User {
   mobile       String?       @unique
   profileImage String?       @map("profile_image")
   isVerified   Boolean       @default(false) @map("is_verified")
-  country      String?
-  status       UserStatus    @default(Active)
+  country      String
+  status       UserStatus    @default(ACTIVE)
   createdAt    DateTime      @default(now()) @map("created_at")
   updatedAt    DateTime      @updatedAt @map("updated_at")
 
@@ -111,10 +111,11 @@ model Admin {
   lastname     String
   email        String      @unique
   profileImage String?     @map("profile_image")
-  status       AdminStatus @default(Active)
+  status       AdminStatus @default(ACTIVE)
   createdAt    DateTime    @default(now()) @map("created_at")
   updatedAt    DateTime    @updatedAt @map("updated_at")
-
+  wallet       AdminWallet?         
+  transactions AdminTransaction[] 
   meta         AdminMeta?
 
   @@map("admin")
@@ -132,11 +133,11 @@ model AdminMeta {
 
 
 model Venue {
-  id            String  @id @default(cuid())
+  id            Int  @id @default(autoincrement())
   name          String
   address       String
   city          String
-  state         String?
+  state         String
   country       String  @default("IN")
   totalCapacity Int
 
@@ -152,15 +153,16 @@ model Event {
   description    String?
   startTime      DateTime
   endTime        DateTime
-  venueId        String
+  venueId        Int
   performers     String
   ticketPrice    Decimal       @db.Decimal(10, 2)
-  maxTickets     Int
+  maxTickets     Int           
   ticketsSold    Int           @default(0)
+  eventDate      String        @default("2026-05-02")
   status         EventStatus   @default(ACTIVE)
-
-  managerId      Int           @map("manager_id")   
-  manager        User          @relation("ManagerEvents", fields: [managerId], references: [id])
+                               
+  managerId      Int?           @map("manager_id")   
+  manager        User?          @relation("ManagerEvents", fields: [managerId], references: [id])
 
   bookings       Booking[]
   venue          Venue         @relation(fields: [venueId], references: [id])
@@ -189,7 +191,7 @@ model Booking {
   revenueShare  RevenueShare?
   transactions  Transaction[]  @relation("BookingToTransaction")
   createdAt     DateTime       @default(now()) @map("created_at")
-
+  adminTransactions AdminTransaction[]  @relation("BookingToAdminTransaction")
   @@index([userId])
   @@index([eventId])
   @@index([holdExpiresAt])
@@ -201,7 +203,7 @@ model RevenueShare {
 
   bookingId     Int      @unique
   eventId       Int
-  managerId     Int
+  managerId     Int?
 
   totalAmount   Decimal  @db.Decimal(10, 2)
 
@@ -222,13 +224,46 @@ model RevenueShare {
   @@index([status])
   @@map("revenue_shares")
 }
+  
+model AdminWallet {
+  id        Int      @id @default(autoincrement())
+  adminId   Int      @unique @map("admin_id")
+  balance   Decimal  @db.Decimal(10, 2) @default(0)
+  createdAt DateTime @default(now()) @map("created_at")
+
+  admin        Admin              @relation(fields: [adminId], references: [id])
+  transactions AdminTransaction[]
+
+  @@map("admin_wallet")
+}
+model AdminTransaction {
+  id            Int             @id @default(autoincrement())
+  adminWalletId Int             @map("admin_wallet_id")
+  adminId       Int             @map("admin_id")
+  bookingId     Int?            @map("booking_id")
+  amount        Decimal         @db.Decimal(10, 2)
+  creadedAmout     Decimal?      @db.Decimal(10, 2)
+  type          TransactionType
+  description   String
+  createdAt     DateTime        @default(now()) @map("created_at")
+
+  adminWallet    AdminWallet     @relation(fields: [adminWalletId], references: [id])
+  admin          Admin           @relation(fields: [adminId], references: [id])
+  booking        Booking?        @relation("BookingToAdminTransaction", fields: [bookingId], references: [id])
+ 
+  @@index([adminWalletId])
+  @@index([adminId])
+  @@index([bookingId])
+  @@map("admin_transaction")
+}
+
 
 model Wallet {
   id        Int     @id @default(autoincrement())
   userId    Int     @unique @map("user_id")
   balance Decimal   @db.Decimal(10, 2) @default(1000)
 
-  user        User          @relation(fields: [userId], references: [id])
+  user        User   @relation(fields: [userId], references: [id])
   transactions Transaction[]
 
   createdAt DateTime @default(now()) @map("created_at")
@@ -248,7 +283,7 @@ model Transaction {
   wallet      Wallet          @relation(fields: [walletId], references: [id])
   user        User            @relation(fields: [userId], references: [id]) 
 
-  booking     Booking?        @relation("BookingToTransaction", fields: [bookingId], references: [id]) // ✅ SAME NAME
+  booking     Booking?        @relation("BookingToTransaction", fields: [bookingId], references: [id]) 
   createdAt   DateTime        @default(now()) @map("created_at")
 
   @@index([walletId])

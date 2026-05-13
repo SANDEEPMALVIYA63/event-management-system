@@ -1,8 +1,4 @@
-import {
-  Injectable,
-  NotFoundException,
-  ForbiddenException,
-} from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { PrismaService } from 'src/prisma';
 import { UserType } from 'src/generated/prisma/enums';
 
@@ -10,34 +6,56 @@ import { UserType } from 'src/generated/prisma/enums';
 export class ReportService {
   constructor(private readonly prisma: PrismaService) {}
 
-  async getRevenueReport(managerId: number) {
-    // const { managerId } = dto;
+  async getRevenueReport(userId: number, userType: UserType) {
+    if (userType === UserType.ADMIN) {
+      const admin = await this.prisma.admin.findFirst();
+      if (!admin) throw new Error('Admin not found');
 
-    const manager = await this.prisma.user.findUnique({
-      where: { id: managerId },
-    });
+      const result = await this.prisma.revenueShare.aggregate({
+        _sum: {
+          totalAmount: true,
+          adminShare: true,
+          managerShare: true,
+        },
+      });
 
-    if (!manager) {
-      throw new NotFoundException('User not found');
+      return {
+        role: 'ADMIN',
+        totalRevenue: result._sum.totalAmount ?? 0,
+        adminEarning: result._sum.adminShare ?? 0,
+        managerEarning: result._sum.managerShare ?? 0,
+      };
     }
-    if (manager.role !== UserType.MANAGER && manager.role !== UserType.ADMIN) {
-      throw new ForbiddenException(
-        'You do not have permission to perform this action',
-      );
-    }
-    const result = await this.prisma.revenueShare.aggregate({
-      where: { managerId },
-      _sum: {
-        totalAmount: true,
-        adminShare: true,
-        managerShare: true,
-      },
-    });
 
-    return {
-      totalRevenue: result._sum.totalAmount ?? 0,
-      adminEarning: result._sum.adminShare ?? 0,
-      managerEarning: result._sum.managerShare ?? 0,
-    };
+    if (userType === UserType.MANAGER) {
+      const manager = await this.prisma.user.findUnique({
+        where: { id: userId },
+      });
+      if (!manager) throw new Error('Manager not found');
+      if (manager.role !== UserType.MANAGER) {
+        throw new Error('You do not have permission');
+      }
+
+      const result = await this.prisma.revenueShare.aggregate({
+        where: { managerId: userId },
+        _sum: {
+          totalAmount: true,
+          adminShare: true,
+          managerShare: true,
+        },
+      });
+
+      return {
+        role: UserType.MANAGER,
+        managerId: manager.id,
+        ManagerName: manager.firstname,
+        managerEmail: manager.email,
+        totalRevenue: result._sum.totalAmount ?? 0,
+        adminEarning: result._sum.adminShare ?? 0,
+        managerEarning: result._sum.managerShare ?? 0,
+      };
+    }
+
+    throw new Error('Invalid role');
   }
 }

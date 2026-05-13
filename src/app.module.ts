@@ -18,6 +18,7 @@ import { EventModule } from './event/event.module';
 import { VenueModule } from './venue/venue.module';
 import { BookingModule } from './booking/booking.module';
 import { ReportModule } from './report/report.module';
+import { PaymentModule } from './payment/payment.module';
 
 @Module({
   imports: [
@@ -46,6 +47,7 @@ import { ReportModule } from './report/report.module';
     VenueModule,
     BookingModule,
     ReportModule,
+    PaymentModule,
   ],
   controllers: [AppController],
   providers: [

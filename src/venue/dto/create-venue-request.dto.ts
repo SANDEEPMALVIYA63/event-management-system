@@ -1,31 +1,31 @@
 // dto/create-venue.dto.ts
-import { ApiProperty } from "@nestjs/swagger";
-import { IsNotEmpty, IsOptional, IsString, IsInt } from "class-validator";
+import { ApiProperty } from '@nestjs/swagger';
+import { IsNotEmpty, IsOptional, IsString, IsInt } from 'class-validator';
 
 export class CreateVenueDto {
-  @ApiProperty({ example: "Delhi Stadium" })
+  @ApiProperty({ example: 'Delhi Stadium' })
   @IsString()
   @IsNotEmpty()
   name: string;
 
-  @ApiProperty({ example: "Sector 18, Noida" })
+  @ApiProperty({ example: 'Sector 18, Noida' })
   @IsString()
   @IsNotEmpty()
   address: string;
 
-  @ApiProperty({ example: "Noida" })
+  @ApiProperty({ example: 'Noida' })
   @IsString()
   city: string;
 
-  @ApiProperty({ example: "UP", required: false })
+  @ApiProperty({ example: 'UP', required: false })
   @IsOptional()
   @IsString()
-  state?: string;
+  state: string;
 
-  @ApiProperty({ example: "IN", default: "IN" })
+  @ApiProperty({ example: 'IN', default: 'IN' })
   @IsOptional()
   @IsString()
-  country?: string;
+  country: string;
 
   @ApiProperty({ example: 5000 })
   @IsInt()

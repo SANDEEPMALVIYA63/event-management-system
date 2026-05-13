@@ -24,25 +24,23 @@ export class AccessGuard implements CanActivate {
   async canActivate(context: ExecutionContext): Promise<boolean> {
     const request = context.switchToHttp().getRequest();
     const user = request.user as AuthenticatedUser | undefined;
-    console.log(user);
-
     if (!user) return false;
+
     return await this.validate(user);
   }
   async validate(user: AuthenticatedUser) {
-    console.log('Full user object:', user);
-    console.log('User type:', user.type);
-    console.log('UserType.ADMIN value:', UserType.ADMIN);
-    console.log('Match?:', user.type === UserType.ADMIN);
     const cacheKey = getAccessGuardCacheKey(user);
     const cacheTtl = 300000;
 
-    if (await this.cacheManager.get(cacheKey)) return true;
+    const cached = await this.cacheManager.get(cacheKey);
+    if (cached === true) return true;
+    if (cached === false) throw new UnauthorizedException();
+
     if (user.type === UserType.USER) {
       const userInfo = await this.prisma.user.findUnique({
         where: { id: user.id },
       });
-      if (userInfo?.status !== UserStatus.Active) {
+      if (userInfo?.status !== UserStatus.ACTIVE) {
         await this.cacheManager.set(cacheKey, false, cacheTtl);
         throw new UnauthorizedException();
       }
@@ -50,8 +48,21 @@ export class AccessGuard implements CanActivate {
       const userInfo = await this.prisma.admin.findUnique({
         where: { id: user.id },
       });
-      if (userInfo?.status !== AdminStatus.Active) {
+
+      if (userInfo?.status !== AdminStatus.ACTIVE) {
         await this.cacheManager.set(cacheKey, false, cacheTtl);
+        throw new UnauthorizedException();
+      }
+    } else if (user.type === UserType.MANAGER) {
+      const userInfo = await this.prisma.user.findUnique({
+        where: {
+          id: user.id,
+        },
+      });
+
+      if (userInfo?.status !== UserStatus.ACTIVE) {
+        await this.cacheManager.set(cacheKey, false, cacheTtl);
+
         throw new UnauthorizedException();
       }
     }

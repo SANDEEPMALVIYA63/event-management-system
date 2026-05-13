@@ -28,7 +28,8 @@ const logger = new LoggerService();
 
 async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule, {
-    logger: process.env.NODE_TYPE === NodeType.Master ? undefined : false,
+    // logger: process.env.NODE_TYPE === NodeType.Master ? undefined : false,/
+    logger: false,
   });
 
   const configService = app.get(ConfigService<EnvironmentVariables, true>);

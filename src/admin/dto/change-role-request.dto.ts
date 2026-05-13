@@ -6,9 +6,7 @@ export class ChangeRoleDto {
   @ApiProperty()
   userId: number;
 
-  @ApiProperty({
-    enum: UserType,
-  })
+  @ApiProperty({ enum: UserType })
   @IsEnum(UserType)
   role: UserType;
 }

@@ -4,9 +4,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma';
-import { CreateVenueDto } from './dto/create-venue-request.dto';
-import { UpdateVenueDto } from './dto/update-vanue-request.dto';
-
+import { CreateVenueDto, UpdateVenueDto } from './dto';
 @Injectable()
 export class VenueService {
   constructor(private readonly prisma: PrismaService) {}
@@ -37,9 +35,9 @@ export class VenueService {
     return venue;
   }
 
-  async updateVenue(id: string, data: UpdateVenueDto) {
+  async updateVenue(id: number, data: UpdateVenueDto) {
     const venue = await this.prisma.venue.findUnique({
-      where: { id },
+      where: { id: id },
     });
     if (!venue) {
       throw new NotFoundException('Venue not found');
@@ -50,7 +48,7 @@ export class VenueService {
         where: {
           name: data.name,
           city: data.city,
-          NOT: { id },
+          NOT: { id: id },
         },
       });
 

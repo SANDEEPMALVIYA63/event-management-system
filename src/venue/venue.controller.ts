@@ -6,11 +6,9 @@ import {
   Patch,
   Param,
   Get,
-  Delete,
 } from '@nestjs/common';
 import { VenueService } from './venue.service';
-import { CreateVenueDto } from './dto/create-venue-request.dto';
-import { UpdateVenueDto } from './dto/update-vanue-request.dto';
+import { CreateVenueDto, UpdateVenueDto } from './dto';
 import {
   ApiBearerAuth,
   ApiOperation,
@@ -23,21 +21,18 @@ import {
   RolesGuard,
   Roles,
   UserType,
-  // AccessGuard,
+  AccessGuard,
 } from '@Common';
-// import { updateEventDto } from 'src/event/dto/update-event-request.dto';
 @ApiTags('Venue')
 @ApiBearerAuth()
 @Controller('venue')
 @Roles(UserType.ADMIN, UserType.MANAGER)
-@UseGuards(JwtAuthGuard, RolesGuard)
+@UseGuards(JwtAuthGuard, AccessGuard, RolesGuard)
 export class VenueController {
   constructor(private venueService: VenueService) {}
 
   @Post()
   @ApiOperation({ summary: 'Create new venue' })
-  // @ApiResponse({ status: 201, description: 'Venue created successfully' })
-  // @ApiResponse({ status: 400, description: 'Venue already exists' })
   async createVenue(@Body() dto: CreateVenueDto) {
     return this.venueService.createVenue(dto);
   }
@@ -50,7 +45,7 @@ export class VenueController {
 
   @Patch('update/:id')
   @ApiParam({ name: 'id' })
-  async updateVenue(@Param('id') id: string, @Body() dto: UpdateVenueDto) {
+  async updateVenue(@Param('id') id: number, @Body() dto: UpdateVenueDto) {
     return this.venueService.updateVenue(id, dto);
   }
 
