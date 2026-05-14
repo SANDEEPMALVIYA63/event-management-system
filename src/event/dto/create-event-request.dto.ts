@@ -1,5 +1,6 @@
 // dto/create-event.dto.ts
 import { ApiProperty } from '@nestjs/swagger';
+import { Type } from 'class-transformer';
 import {
   IsString,
   IsNotEmpty,
@@ -7,7 +8,8 @@ import {
   IsInt,
   IsEnum,
   IsNumber,
-  // Matches,
+  Min,
+  Matches,
 } from 'class-validator';
 import { EventType } from 'src/generated/prisma/enums';
 
@@ -21,31 +23,28 @@ export class CreateEventDto {
   @IsEnum(EventType)
   type: EventType;
 
+  @IsString()
   @ApiProperty()
+  @IsNotEmpty()
   description?: string;
 
   @ApiProperty()
-  @IsString()
+  @IsDateString()
   @IsNotEmpty()
   eventDate: string;
 
-  @ApiProperty()
-  @IsDateString()
-  // @Matches(/^([01]\d|2[0-3]):([0-5]\d)$/, {
-  //   message: 'Invalid time format, use HH:MM',
-  // })
+  @ApiProperty({ example: '19:30', description: 'Format: HH:MM' })
+  @Matches(/^([01]\d|2[0-3]):([0-5]\d)$/, {
+    message: 'startTime must be in HH:MM format (e.g. 19:30)',
+  })
   startTime: string;
 
-  @ApiProperty()
-  @IsDateString()
-  // @Matches(/^([01]\d|2[0-3]):([0-5]\d)$/, {
-  //   message: 'Invalid time format, use HH:MM',
-  // })
+  @ApiProperty({ example: '21:30', description: 'Format: HH:MM' })
+  @Matches(/^([01]\d|2[0-3]):([0-5]\d)$/, {
+    message: 'endTime must be in HH:MM format (e.g. 21:30)',
+  })
   endTime: string;
 
-  @ApiProperty()
-  @IsNumber()
-  venueId: number;
   @ApiProperty()
   @IsString()
   performers: string;
@@ -57,4 +56,35 @@ export class CreateEventDto {
   @ApiProperty()
   @IsInt()
   maxTickets: number;
+
+  @ApiProperty()
+  @IsString()
+  @IsNotEmpty()
+  venueName: string;
+
+  @ApiProperty()
+  @IsString()
+  @IsNotEmpty()
+  venueAddress: string;
+
+  @ApiProperty()
+  @IsString()
+  @IsNotEmpty()
+  venueCity: string;
+
+  @ApiProperty()
+  @IsString()
+  @IsNotEmpty()
+  venueState: string;
+
+  @ApiProperty()
+  @IsString()
+  @IsNotEmpty()
+  venueCountry: string = 'IN';
+
+  @ApiProperty()
+  @IsInt()
+  @Min(1)
+  @Type(() => Number)
+  venueTotalCapacity: number;
 }

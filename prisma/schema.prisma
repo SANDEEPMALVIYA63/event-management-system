@@ -11,12 +11,12 @@ generator client {
   output   = "../src/generated/prisma"
 }
 
-
 enum UserType {
   USER
   ADMIN
   MANAGER
 }
+
 enum RevenueStatus {
   PENDING
   SETTLED
@@ -25,6 +25,7 @@ enum RevenueStatus {
 
 enum AdminStatus {
   ACTIVE @map("active")
+
   @@map("admin_status")
 }
 
@@ -36,9 +37,9 @@ enum UserStatus {
 }
 
 enum EventStatus {
-  ACTIVE     @map("active")
-  INACTIVE   @map("inactive")
-  SUSPENDED  @map("suspended")
+  ACTIVE    @map("active")
+  INACTIVE  @map("inactive")
+  SUSPENDED @map("suspended")
 
   @@map("event_status")
 }
@@ -53,13 +54,13 @@ enum EventType {
 }
 
 enum BookingStatus {
-  HOLD       @map("hold")
-  CONFIRMED  @map("confirmed")
-  CANCELLED  @map("cancelled")
-  EXPIRED    @map("expired")
+  HOLD      @map("hold")
+  CONFIRMED @map("confirmed")
+  CANCELLED @map("cancelled")
+  EXPIRED   @map("expired")
 
   @@map("booking_status")
-} 
+}
 
 enum TransactionType {
   CREDIT @map("credit")
@@ -69,53 +70,53 @@ enum TransactionType {
 }
 
 model User {
-  id           Int           @id @default(autoincrement())
+  id           Int        @id @default(autoincrement())
   firstname    String
   lastname     String
-  username     String?       @unique
-  email        String        @unique
-  role         UserType      @default(USER)
-  dialCode     String?       @map("dial_code")
-  mobile       String?       @unique
-  profileImage String?       @map("profile_image")
-  isVerified   Boolean       @default(false) @map("is_verified")
+  username     String?    @unique
+  email        String     @unique
+  role         UserType   @default(USER)
+  dialCode     String?    @map("dial_code")
+  mobile       String?    @unique
+  profileImage String?    @map("profile_image")
+  isVerified   Boolean    @default(false) @map("is_verified")
   country      String
-  status       UserStatus    @default(ACTIVE)
-  createdAt    DateTime      @default(now()) @map("created_at")
-  updatedAt    DateTime      @updatedAt @map("updated_at")
+  status       UserStatus @default(ACTIVE)
+  createdAt    DateTime   @default(now()) @map("created_at")
+  updatedAt    DateTime   @updatedAt @map("updated_at")
 
   meta         UserMeta?
   settings     UserSetting[]
-  wallet       Wallet?  
+  wallet       Wallet?
   bookings     Booking[]
   events       Event[]       @relation("ManagerEvents")
-  transactions   Transaction[]
+  transactions Transaction[]
+
   @@map("user")
 }
 
 model UserMeta {
-  googleId      String? @unique @map("google_id")
-  passwordSalt  String? @map("password_salt")
-  passwordHash  String? @map("password_hash")
+  googleId     String? @unique @map("google_id")
+  passwordSalt String? @map("password_salt")
+  passwordHash String? @map("password_hash")
 
-  user          User    @relation(fields: [userId], references: [id])
-  userId        Int     @unique @map("user_id")
+  user   User @relation(fields: [userId], references: [id])
+  userId Int  @unique @map("user_id")
 
   @@map("user_meta")
 }
 
-
 model Admin {
-  id           Int         @id @default(autoincrement())
+  id           Int                @id @default(autoincrement())
   firstname    String
   lastname     String
-  email        String      @unique
-  profileImage String?     @map("profile_image")
-  status       AdminStatus @default(ACTIVE)
-  createdAt    DateTime    @default(now()) @map("created_at")
-  updatedAt    DateTime    @updatedAt @map("updated_at")
-  wallet       AdminWallet?         
-  transactions AdminTransaction[] 
+  email        String             @unique
+  profileImage String?            @map("profile_image")
+  status       AdminStatus        @default(ACTIVE)
+  createdAt    DateTime           @default(now()) @map("created_at")
+  updatedAt    DateTime           @updatedAt @map("updated_at")
+  wallet       AdminWallet?
+  transactions AdminTransaction[]
   meta         AdminMeta?
 
   @@map("admin")
@@ -125,73 +126,67 @@ model AdminMeta {
   passwordSalt String? @map("password_salt")
   passwordHash String? @map("password_hash")
 
-  admin        Admin   @relation(fields: [adminId], references: [id])
-  adminId      Int     @unique @map("admin_id")
+  admin   Admin @relation(fields: [adminId], references: [id])
+  adminId Int   @unique @map("admin_id")
 
   @@map("admin_meta")
 }
 
 
-model Venue {
-  id            Int  @id @default(autoincrement())
-  name          String
-  address       String
-  city          String
-  state         String
-  country       String  @default("IN")
-  totalCapacity Int
-
-  events         Event[]
-
-  @@map("venues")
-}
-
 model Event {
-  id             Int           @id @default(autoincrement())
-  title          String
-  type           EventType
-  description    String?
-  startTime      DateTime
-  endTime        DateTime
-  venueId        Int
-  performers     String
-  ticketPrice    Decimal       @db.Decimal(10, 2)
-  maxTickets     Int           
-  ticketsSold    Int           @default(0)
-  eventDate      String        @default("2026-05-02")
-  status         EventStatus   @default(ACTIVE)
-                               
-  managerId      Int?           @map("manager_id")   
-  manager        User?          @relation("ManagerEvents", fields: [managerId], references: [id])
+  id          Int         @id @default(autoincrement())
+  title       String
+  type        EventType
+  description String?
+  startTime   DateTime
+  endTime     DateTime
+  ticketPrice Decimal     @db.Decimal(10, 2)
+  maxTickets  Int
+  ticketsSold Int         @default(0)
+  eventDate   String    
+  status      EventStatus @default(ACTIVE)
+  performers   String
 
-  bookings       Booking[]
-  venue          Venue         @relation(fields: [venueId], references: [id])
+  venueName          String 
+  venueAddress       String  
+  venueCity          String 
+  venueState         String  
+  venueCountry       String @default("IN")
+  venueTotalCapacity Int    
 
-  createdAt      DateTime      @default(now()) @map("created_at")
-  updatedAt      DateTime      @updatedAt @map("updated_at")
-  revenueShares  RevenueShare[]
+
+  managerId Int?  @map("manager_id")
+  manager   User? @relation("ManagerEvents", fields: [managerId], references: [id])
+
+  bookings Booking[]
+
+  createdAt     DateTime       @default(now()) @map("created_at")
+  updatedAt     DateTime       @updatedAt @map("updated_at")
+  revenueShares RevenueShare[]
+  
   @@index([managerId])
   @@index([status])
   @@map("event")
-}
+ }
 
 model Booking {
-  id            Int            @id @default(autoincrement())
-  userId        Int            @map("user_id")
-  eventId       Int            @map("event_id")
-  quantity      Int
-  totalPrice    Decimal        @db.Decimal(10,2) 
- 
-  status        BookingStatus
-  holdExpiresAt DateTime?      @map("hold_expires_at")
+  id         Int     @id @default(autoincrement())
+  userId     Int     @map("user_id")
+  eventId    Int     @map("event_id")
+  quantity   Int
+  totalPrice Decimal @db.Decimal(10, 2)
 
-  user          User           @relation(fields: [userId], references: [id])
-  event         Event          @relation(fields: [eventId], references: [id])
- 
-  revenueShare  RevenueShare?
-  transactions  Transaction[]  @relation("BookingToTransaction")
-  createdAt     DateTime       @default(now()) @map("created_at")
-  adminTransactions AdminTransaction[]  @relation("BookingToAdminTransaction")
+  status        BookingStatus
+  holdExpiresAt DateTime?     @map("hold_expires_at")
+
+  user  User  @relation(fields: [userId], references: [id])
+  event Event @relation(fields: [eventId], references: [id])
+
+  revenueShare      RevenueShare?
+  transactions      Transaction[]      @relation("BookingToTransaction")
+  createdAt         DateTime           @default(now()) @map("created_at")
+  adminTransactions AdminTransaction[] @relation("BookingToAdminTransaction")
+
   @@index([userId])
   @@index([eventId])
   @@index([holdExpiresAt])
@@ -199,36 +194,37 @@ model Booking {
 }
 
 model RevenueShare {
-  id            String   @id @default(cuid())
+  id String @id @default(cuid())
 
-  bookingId     Int      @unique
-  eventId       Int
-  managerId     Int?
+  bookingId Int  @unique
+  eventId   Int
+  managerId Int?
 
-  totalAmount   Decimal  @db.Decimal(10, 2)
+  totalAmount Decimal @db.Decimal(10, 2)
 
-  adminPercent  Decimal  @db.Decimal(5,2) 
-  managerPercent Decimal @db.Decimal(5,2) 
-  adminShare    Decimal  @db.Decimal(10, 2)
-  managerShare  Decimal  @db.Decimal(10, 2)
+  adminPercent   Decimal @db.Decimal(5, 2)
+  managerPercent Decimal @db.Decimal(5, 2)
+  adminShare     Decimal @db.Decimal(10, 2)
+  managerShare   Decimal @db.Decimal(10, 2)
 
-  status        RevenueStatus 
+  status RevenueStatus
 
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-  booking       Booking  @relation(fields: [bookingId], references: [id])
- event   Event   @relation(fields: [eventId], references: [id]) 
+  booking Booking @relation(fields: [bookingId], references: [id])
+  event   Event   @relation(fields: [eventId], references: [id])
+
   @@index([managerId])
   @@index([eventId])
   @@index([status])
   @@map("revenue_shares")
 }
-  
+
 model AdminWallet {
   id        Int      @id @default(autoincrement())
   adminId   Int      @unique @map("admin_id")
-  balance   Decimal  @db.Decimal(10, 2) @default(0)
+  balance   Decimal  @default(0) @db.Decimal(10, 2)
   createdAt DateTime @default(now()) @map("created_at")
 
   admin        Admin              @relation(fields: [adminId], references: [id])
@@ -236,34 +232,34 @@ model AdminWallet {
 
   @@map("admin_wallet")
 }
+
 model AdminTransaction {
   id            Int             @id @default(autoincrement())
   adminWalletId Int             @map("admin_wallet_id")
   adminId       Int             @map("admin_id")
   bookingId     Int?            @map("booking_id")
   amount        Decimal         @db.Decimal(10, 2)
-  creadedAmout     Decimal?      @db.Decimal(10, 2)
+  creadedAmout  Decimal?        @db.Decimal(10, 2)
   type          TransactionType
   description   String
   createdAt     DateTime        @default(now()) @map("created_at")
 
-  adminWallet    AdminWallet     @relation(fields: [adminWalletId], references: [id])
-  admin          Admin           @relation(fields: [adminId], references: [id])
-  booking        Booking?        @relation("BookingToAdminTransaction", fields: [bookingId], references: [id])
- 
+  adminWallet AdminWallet @relation(fields: [adminWalletId], references: [id])
+  admin       Admin       @relation(fields: [adminId], references: [id])
+  booking     Booking?    @relation("BookingToAdminTransaction", fields: [bookingId], references: [id])
+
   @@index([adminWalletId])
   @@index([adminId])
   @@index([bookingId])
   @@map("admin_transaction")
 }
 
-
 model Wallet {
-  id        Int     @id @default(autoincrement())
-  userId    Int     @unique @map("user_id")
-  balance Decimal   @db.Decimal(10, 2) @default(1000)
+  id      Int     @id @default(autoincrement())
+  userId  Int     @unique @map("user_id")
+  balance Decimal @default(1000) @db.Decimal(10, 2)
 
-  user        User   @relation(fields: [userId], references: [id])
+  user         User          @relation(fields: [userId], references: [id])
   transactions Transaction[]
 
   createdAt DateTime @default(now()) @map("created_at")
@@ -274,17 +270,17 @@ model Wallet {
 model Transaction {
   id          Int             @id @default(autoincrement())
   walletId    Int             @map("wallet_id")
-  userId      Int             @map("user_id")   
+  userId      Int             @map("user_id")
   bookingId   Int?            @map("booking_id")
   amount      Int
   type        TransactionType
   description String
-  
-  wallet      Wallet          @relation(fields: [walletId], references: [id])
-  user        User            @relation(fields: [userId], references: [id]) 
 
-  booking     Booking?        @relation("BookingToTransaction", fields: [bookingId], references: [id]) 
-  createdAt   DateTime        @default(now()) @map("created_at")
+  wallet Wallet @relation(fields: [walletId], references: [id])
+  user   User   @relation(fields: [userId], references: [id])
+
+  booking   Booking? @relation("BookingToTransaction", fields: [bookingId], references: [id])
+  createdAt DateTime @default(now()) @map("created_at")
 
   @@index([walletId])
   @@index([userId])
@@ -301,13 +297,13 @@ enum OtpTransport {
 
 model Otp {
   code             String
-  attempt          Int      @default(1) @db.SmallInt
-  lastSentAt       DateTime @default(now()) @map("last_sent_at")
-  retries          Int      @default(0) @db.SmallInt
+  attempt          Int          @default(1) @db.SmallInt
+  lastSentAt       DateTime     @default(now()) @map("last_sent_at")
+  retries          Int          @default(0) @db.SmallInt
   transport        OtpTransport
   target           String
-  lastCodeVerified Boolean  @default(false) @map("last_code_verified")
-  blocked          Boolean  @default(false)
+  lastCodeVerified Boolean      @default(false) @map("last_code_verified")
+  blocked          Boolean      @default(false)
 
   @@unique([transport, target])
   @@map("otp")
@@ -329,31 +325,31 @@ enum SettingContext {
 }
 
 model Setting {
-  id               Int             @id @default(autoincrement())
-  mappedTo         String          @map("mapped_to")
-  text             String          @default("")
-  description      String          @default("")
+  id               Int            @id @default(autoincrement())
+  mappedTo         String         @map("mapped_to")
+  text             String         @default("")
+  description      String         @default("")
   type             SettingType
   context          SettingContext
   default          Json
-  isDefinedOptions Boolean         @map("is_defined_options")
+  isDefinedOptions Boolean        @map("is_defined_options")
 
-  subSettings      Setting[]       @relation("SubSettings")
-  dependsOn        Setting?        @relation("SubSettings", fields: [parentId], references: [id])
-  parentId         Int?            @map("parent_id")
+  subSettings Setting[] @relation("SubSettings")
+  dependsOn   Setting?  @relation("SubSettings", fields: [parentId], references: [id])
+  parentId    Int?      @map("parent_id")
 
-  options          SettingOption[]
-  userSettings     UserSetting[]
-  systemSettings   SystemSetting[]
+  options        SettingOption[]
+  userSettings   UserSetting[]
+  systemSettings SystemSetting[]
 
   @@unique([context, mappedTo])
   @@map("setting")
 }
 
 model SettingOption {
-  id        Int     @id @default(autoincrement())
-  text      String  @default("")
-  value     String
+  id    Int    @id @default(autoincrement())
+  text  String @default("")
+  value String
 
   setting   Setting @relation(fields: [settingId], references: [id])
   settingId Int     @map("setting_id")
@@ -365,8 +361,8 @@ model SettingOption {
 model UserSetting {
   selection Json
 
-  user      User    @relation(fields: [userId], references: [id])
-  userId    Int     @map("user_id")
+  user   User @relation(fields: [userId], references: [id])
+  userId Int  @map("user_id")
 
   setting   Setting @relation(fields: [settingId], references: [id])
   settingId Int     @map("setting_id")

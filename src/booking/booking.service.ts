@@ -1,10 +1,4 @@
-import {
-  Inject,
-  Injectable,
-  BadRequestException,
-  NotFoundException,
-  Logger,
-} from '@nestjs/common';
+import { Inject, Injectable, Logger } from '@nestjs/common';
 import { AuthenticatedUser } from '@Common';
 import { PrismaService } from '../prisma';
 import {
@@ -55,20 +49,20 @@ export class BookingService {
       });
 
       if (!event) {
-        throw new NotFoundException('Event not found');
+        throw new Error('Event not found');
       }
 
       if (event.status !== EventStatus.ACTIVE) {
-        throw new BadRequestException('Event is not active');
+        throw new Error('Event is not active');
       }
 
       const now = new Date();
       if (event.startTime <= now) {
-        throw new BadRequestException('Event already started');
+        throw new Error('Event already started');
       }
 
       if (dto.quantity <= 0) {
-        throw new BadRequestException('Invalid quantity');
+        throw new Error('Invalid quantity');
       }
 
       const todayStart = new Date();
@@ -90,7 +84,6 @@ export class BookingService {
       const alreadyBookedToday = Number(todayBookings._sum.quantity ?? 0);
 
       if (alreadyBookedToday + dto.quantity > maxTicketsPerDay) {
-        // const remaining = maxTicketsPerDay - alreadyBookedToday;
         throw new Error(
           `You can only book a maximum of ${maxTicketsPerDay} tickets per day for this event`,
         );
@@ -146,7 +139,13 @@ export class BookingService {
               wallet: true,
             },
           },
-          event: true,
+          event: {
+            include: {
+              manager: {
+                include: { wallet: true },
+              },
+            },
+          },
           transactions: true,
         },
       });
@@ -252,6 +251,7 @@ export class BookingService {
         data: {
           bookingId: booking.id,
           eventId: booking.eventId,
+          managerId: booking.event.managerId,
           totalAmount: booking.totalPrice,
           adminPercent: adminPercent,
           managerPercent: managerPercent,

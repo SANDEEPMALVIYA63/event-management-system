@@ -6,8 +6,6 @@ import { ConfirmBookingDto } from './dto/confirm-booking-request.dto';
 import {
   AccessGuard,
   AuthenticatedRequest,
-  // AuthenticatedRequest,
-  // BaseController,
   JwtAuthGuard,
   Roles,
   RolesGuard,
@@ -25,7 +23,6 @@ export class BookingController {
   }
 
   @Post()
-  // @ApiOperation()
   createBooking(
     @Req() req: AuthenticatedRequest,
     @Body() dto: CreateBookingDto,

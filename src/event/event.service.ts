@@ -1,12 +1,8 @@
-import {
-  Injectable,
-  NotFoundException,
-  BadRequestException,
-} from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma';
 import { CreateEventDto } from './dto/create-event-request.dto';
 import { EventStatus } from 'src/generated/prisma/enums';
-import { AuthenticatedUser } from '@Common';
+import { AuthenticatedUser, UserType } from '@Common';
 import { UpdateEventStatusDto } from './dto/UpdateEventStatusDto-request.dto';
 
 @Injectable()
@@ -14,55 +10,99 @@ export class EventService {
   constructor(private readonly prisma: PrismaService) {}
 
   async createEvent(ctx: AuthenticatedUser, dto: CreateEventDto) {
-    const venue = await this.prisma.venue.findUnique({
-      where: { id: dto.venueId },
-      include: {
-        events: true,
-      },
-    });
-    if (!venue) {
-      throw new NotFoundException('Venue not found');
+    const startTime = new Date(`${dto.eventDate}T${dto.startTime}:00.000Z`);
+    const endTime = new Date(`${dto.eventDate}T${dto.endTime}:00.000Z`);
+
+    console.log(`startTime ${startTime} endTime${endTime} `);
+
+    if (isNaN(startTime.getTime()) || isNaN(endTime.getTime())) {
+      throw new Error('Invalid date or time format');
     }
-    const startTime = new Date(dto.startTime);
-    const endTime = new Date(dto.endTime);
 
     if (startTime >= endTime) {
-      throw new BadRequestException('End time must be after start time');
+      throw new Error('endTime must be after startTime');
     }
 
-    if (dto.maxTickets <= 0) {
-      throw new BadRequestException('Invalid ticket count');
-    }
-    if (dto.maxTickets > venue.totalCapacity) {
-      throw new BadRequestException('Tickets exceed venue capacity');
+    if (dto.maxTickets > dto.venueTotalCapacity) {
+      throw new Error(
+        `maxTickets (${dto.maxTickets}) cannot exceed venueTotalCapacity (${dto.venueTotalCapacity})`,
+      );
     }
 
+    if (ctx.type !== UserType.ADMIN && ctx.type !== UserType.MANAGER) {
+      throw new Error('only admin and manager allow ');
+    }
     const event = await this.prisma.event.create({
       data: {
         title: dto.title,
         type: dto.type,
         description: dto.description,
         eventDate: dto.eventDate,
-        startTime: dto.startTime,
-        endTime: dto.endTime,
+        startTime,
+        endTime,
         performers: dto.performers,
         ticketPrice: dto.ticketPrice,
         maxTickets: dto.maxTickets,
-        venue: {
-          connect: { id: dto.venueId },
-        },
-        // manager: {
-        //   connect: { id: ctx.id },
-        // },
-
+        ticketsSold: 0,
         status: EventStatus.ACTIVE,
-      },
-      include: {
-        venue: true,
+        venueName: dto.venueName,
+        venueAddress: dto.venueAddress,
+        venueCity: dto.venueCity,
+        venueState: dto.venueState,
+        venueCountry: dto.venueCountry,
+        venueTotalCapacity: dto.venueTotalCapacity,
+
+        manager: { connect: { id: ctx.id } },
       },
     });
-
     return event;
+
+    //   const venue = await this.prisma.venue.findUnique({
+
+    //     where: { id: dto.venueId },
+    //     include: {
+    //       events: true,
+    //     },
+    //   });
+    //   if (!venue) {
+    //     throw new NotFoundException('Venue not found');
+    //   }
+    //   const startTime = new Date(dto.startTime);
+    //   const endTime = new Date(dto.endTime);
+    //   if (startTime >= endTime) {
+    //     throw new BadRequestException('End time must be after start time');
+    //   }
+    //   if (dto.maxTickets <= 0) {
+    //     throw new BadRequestException('Invalid ticket count');
+    //   }
+    //   if (dto.maxTickets > venue.totalCapacity) {
+    //     throw new BadRequestException('Tickets exceed venue capacity');
+    //   }
+    //   const event = await this.prisma.event.create({
+    //     data: {
+    //       title: dto.title,
+    //       type: dto.type,
+    //       description: dto.description,
+    //       eventDate: dto.eventDate,
+    //       startTime: dto.startTime,
+    //       endTime: dto.endTime,
+    //       performers: dto.performers,
+    //       ticketPrice: dto.ticketPrice,
+    //       maxTickets: dto.maxTickets,
+    //       venue: {
+    //         connect: { id: dto.venueId },
+    //       },
+    //       // manager: {
+    //       //   connect: { id: ctx.id },
+    //       // },
+    //       status: EventStatus.ACTIVE,
+    //     },
+    //     include: {
+    //       venue: true,
+    //     },
+    //   });
+    //   return event;
+    //
   }
 
   // async updateEvent(
@@ -171,16 +211,6 @@ export class EventService {
       where: { id },
 
       include: {
-        venue: {
-          select: {
-            id: true,
-            name: true,
-            address: true,
-            city: true,
-            state: true,
-            totalCapacity: true,
-          },
-        },
         manager: {
           select: {
             id: true,
@@ -200,7 +230,7 @@ export class EventService {
     });
 
     if (!event) {
-      throw new NotFoundException('Event not found');
+      throw new Error('Event not found');
     }
 
     return {
@@ -216,16 +246,6 @@ export class EventService {
         createdAt: 'desc',
       },
       include: {
-        venue: {
-          select: {
-            id: true,
-            name: true,
-            address: true,
-            city: true,
-            state: true,
-            totalCapacity: true,
-          },
-        },
         manager: {
           select: {
             id: true,
@@ -238,7 +258,7 @@ export class EventService {
     });
 
     if (!event) {
-      throw new NotFoundException('event is not found ');
+      throw new Error('event is not found ');
     }
 
     return event;
@@ -257,7 +277,7 @@ export class EventService {
       });
 
       if (!event) {
-        throw new NotFoundException('Event not found');
+        throw new Error('Event not found');
       }
 
       // if (ctx.type === UserType.MANAGER) {

@@ -23,6 +23,6 @@ export class ReportController {
     @Req() req: AuthenticatedRequest,
     // @Query() dto: ReportQueryDto,
   ) {
-    return this.reportService.getRevenueReport(req.user.id, req.user.type);
+    return this.reportService.getRevenueReport(req.user.id);
   }
 }

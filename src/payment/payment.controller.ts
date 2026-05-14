@@ -21,12 +21,6 @@ export class PaymentController extends BaseController {
     super();
   }
 
-  // @Get('adminWallet')
-  // async getAdminWallet(@Req() req: AuthenticatedRequest) {
-  //   const ctx = this.getContext(req);
-  //   return await this.paymentService.getAdminWallet(ctx.user.id);
-  // }
-
   @Get('admin-transection')
   async getAdminTransection(@Req() req: AuthenticatedRequest) {
     const ctx = this.getContext(req);

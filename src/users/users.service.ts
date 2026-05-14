@@ -1,11 +1,6 @@
 import { join } from 'node:path';
 import { Cache } from 'cache-manager';
-import {
-  Inject,
-  Injectable,
-  // NotFoundException,
-  // BadRequestException,
-} from '@nestjs/common';
+import { Inject, Injectable } from '@nestjs/common';
 import { ConfigType } from '@nestjs/config';
 import { CACHE_MANAGER } from '@nestjs/cache-manager';
 import {
@@ -13,9 +8,7 @@ import {
   UserType,
   UtilsService,
   ValidatedUser,
-  // getAccessGuardCacheKey,
   WalletInitialBalance,
-  // TransactionType,
   TrandactionDescription,
 } from '@Common';
 import { userConfigFactory } from '@Config';
@@ -34,8 +27,6 @@ import {
   UserStatus,
 } from '../generated/prisma/client';
 import { TransactionType } from '../generated/prisma/client';
-// import { UpdateUserRoleDto } from './dto/change-role-request.dto';
-// import { use } from 'passport';
 @Injectable()
 export class UsersService {
   constructor(
@@ -652,15 +643,11 @@ export class UsersService {
             endTime: true,
             ticketPrice: true,
             type: true,
-            venue: {
-              select: {
-                name: true,
-                state: true,
-                city: true,
-                address: true,
-                country: true,
-              },
-            },
+            venueName: true,
+            venueCountry: true,
+            venueState: true,
+            venueCity: true,
+            venueAddress: true,
           },
         },
         transactions: {
@@ -690,21 +677,17 @@ export class UsersService {
     // console.log('bookings', bookings);
 
     const userBookingDitails = bookings.map((booking) => {
-      const venue = {
-        name: booking.event.venue.name,
-        country: booking.event.venue.country,
-        state: booking.event.venue.state,
-        city: booking.event.venue.city,
-        address: booking.event.venue.address,
-      };
-
       const event = {
         title: booking.event.title,
         type: booking.event.type,
         startTime: booking.event.startTime,
         endTime: booking.event.endTime,
         ticketPrice: booking.event.ticketPrice,
-        venue,
+        venueName: booking.event.venueName,
+        venueCountry: booking.event.venueCountry,
+        venueState: booking.event.venueState,
+        venueCity: booking.event.venueCity,
+        venueAddress: booking.event.venueAddress,
       };
 
       const payments = booking.transactions.map((tx) => ({

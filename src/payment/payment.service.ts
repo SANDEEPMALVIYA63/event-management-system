@@ -1,5 +1,4 @@
 import { Injectable } from '@nestjs/common';
-// import { UserType } from 'src/generated/prisma/enums';
 import { PrismaService } from 'src/prisma';
 import { TransactionType } from '../generated/prisma/client';
 @Injectable()
@@ -50,18 +49,6 @@ export class PaymentService {
       return updatedWallet;
     });
   }
-
-  // async getAdminWallet(adminId: number) {
-  //   const wallet = await this.prisma.adminWallet.findUnique({
-  //     where: { adminId },
-  //   });
-  //   if (!wallet) {
-  //     throw new Error('AdminWallet is not found ');
-  //   }
-  //   return {
-  //     wallet,
-  //   };
-  // }
 
   async adminTransections(adminId: number) {
     const transactions = await this.prisma.adminTransaction.findMany({
