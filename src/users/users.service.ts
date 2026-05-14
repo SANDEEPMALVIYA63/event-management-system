@@ -674,8 +674,6 @@ export class UsersService {
       return { success: true, total: 0, data: [] };
     }
 
-    // console.log('bookings', bookings);
-
     const userBookingDitails = bookings.map((booking) => {
       const event = {
         title: booking.event.title,

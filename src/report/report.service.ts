@@ -52,32 +52,6 @@ export class ReportService {
     }
 
     throw new Error('Invalid role');
-
-    // const manager = await this.prisma.user.findUnique({
-    //   where: { id: managerId },
-    // });
-
-    // if (!manager) {
-    //   throw new Error('Manager not found');
-    // }
-    // if (manager.role !== UserType.MANAGER) {
-    //   throw new Error('You do not have permission to perform this action');
-    // }
-    // const result = await this.prisma.revenueShare.aggregate({
-    //   where: { managerId: managerId },
-    //   _sum: {
-    //     totalAmount: true,
-    //     adminShare: true,
-    //     managerShare: true,
-    //   },
-    // });
-    // console.log('result', result);
-
-    // return {
-    //   totalRevenue: result._sum.totalAmount ?? 0,
-    //   adminEarning: result._sum.adminShare ?? 0,
-    //   managerEarning: result._sum.managerShare ?? 0,
-    // };
   }
 
   async getManagerWallet(ManagerId: number) {
@@ -159,7 +133,7 @@ export class ReportService {
         id: true,
       },
     });
-    console.log('eventBreakdown', eventBreakdown);
+
     const eventIds = eventBreakdown.map((e) => e.eventId);
     const events = await this.prisma.event.findMany({
       where: { id: { in: eventIds } },

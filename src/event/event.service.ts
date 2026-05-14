@@ -56,53 +56,6 @@ export class EventService {
       },
     });
     return event;
-
-    //   const venue = await this.prisma.venue.findUnique({
-
-    //     where: { id: dto.venueId },
-    //     include: {
-    //       events: true,
-    //     },
-    //   });
-    //   if (!venue) {
-    //     throw new NotFoundException('Venue not found');
-    //   }
-    //   const startTime = new Date(dto.startTime);
-    //   const endTime = new Date(dto.endTime);
-    //   if (startTime >= endTime) {
-    //     throw new BadRequestException('End time must be after start time');
-    //   }
-    //   if (dto.maxTickets <= 0) {
-    //     throw new BadRequestException('Invalid ticket count');
-    //   }
-    //   if (dto.maxTickets > venue.totalCapacity) {
-    //     throw new BadRequestException('Tickets exceed venue capacity');
-    //   }
-    //   const event = await this.prisma.event.create({
-    //     data: {
-    //       title: dto.title,
-    //       type: dto.type,
-    //       description: dto.description,
-    //       eventDate: dto.eventDate,
-    //       startTime: dto.startTime,
-    //       endTime: dto.endTime,
-    //       performers: dto.performers,
-    //       ticketPrice: dto.ticketPrice,
-    //       maxTickets: dto.maxTickets,
-    //       venue: {
-    //         connect: { id: dto.venueId },
-    //       },
-    //       // manager: {
-    //       //   connect: { id: ctx.id },
-    //       // },
-    //       status: EventStatus.ACTIVE,
-    //     },
-    //     include: {
-    //       venue: true,
-    //     },
-    //   });
-    //   return event;
-    //
   }
 
   // async updateEvent(

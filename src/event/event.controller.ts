@@ -24,7 +24,7 @@ import {
 @ApiTags('event')
 @ApiBearerAuth()
 @Roles(UserType.ADMIN, UserType.MANAGER)
-@UseGuards(JwtAuthGuard, RolesGuard)
+@UseGuards(JwtAuthGuard, AccessGuard, RolesGuard)
 @Controller('event')
 export class EventController {
   constructor(private eventService: EventService) {}

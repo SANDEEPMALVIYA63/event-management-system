@@ -11,11 +11,7 @@ import {
   Req,
   UseGuards,
 } from '@nestjs/common';
-import {
-  ApiBearerAuth,
-  ApiTags,
-  // ApiOperation,
-} from '@nestjs/swagger';
+import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import {
   AuthenticatedRequest,
   BaseController,
@@ -23,7 +19,6 @@ import {
   RolesGuard,
   UserType,
   Roles,
-  // AccessGuard,
 } from '@Common';
 import { UsersService } from './users.service';
 import {
@@ -33,9 +28,6 @@ import {
   UpdateProfileImageRequestDto,
   UpdateUserProfileRequestDto,
 } from './dto';
-// import { UserStatus } from '../generated/prisma/client';
-// import { UpdateUserRoleDto } from './dto/change-role-request.dto';
-// import { UserType } from "src/generated/prisma/enums";
 @ApiTags('User')
 @ApiBearerAuth()
 @UseGuards(JwtAuthGuard)
@@ -83,13 +75,6 @@ export class UsersController extends BaseController {
     return { status: 'success' };
   }
 
-  // @Roles(UserType.ADMIN)
-  // @UseGuards(RolesGuard)
-  // @Get(':userId')
-  // async getUserProfile(@Param('userId', ParseIntPipe) userId: number) {
-  //   return await this.usersService.getProfile(userId);
-  // }
-
   @Roles(UserType.ADMIN)
   @UseGuards(RolesGuard)
   @Patch(':userId')
@@ -132,18 +117,6 @@ export class UsersController extends BaseController {
     );
     return { status: 'success' };
   }
-
-  // @ApiParam({ name: 'status', enum: UserStatus })
-  // @Roles(UserType.ADMIN)
-  // @UseGuards(RolesGuard)
-  // @Post(':userId/:status')
-  // async setUserStatus(
-  //   @Param('userId', ParseIntPipe) userId: number,
-  //   @Param('status', new ParseEnumPipe(UserStatus)) status: UserStatus,
-  // ) {
-  //   await this.usersService.setStatus(userId, status);
-  //   return { status: 'success' };
-  // }
 
   @Get('user-purchase-history')
   @Roles(UserType.USER)

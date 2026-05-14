@@ -283,32 +283,4 @@ export class AdminService {
 
     return user;
   }
-  // async updateUserStatus(UserId: number, dto: UpdateUserStatusDto) {
-  //   return this.prisma.$transaction(async (tx) => {
-  //     const user = await tx.user.findUnique({
-  //       where: {
-  //         id: UserId,
-  //       },
-  //     });
-  //     if (!user) {
-  //       throw new NotFoundException('User not found');
-  //     }
-
-  //     if (user.role === UserType.ADMIN) {
-  //       throw new BadRequestException('Admin ko suspend nahi kar sakte');
-  //     }
-
-  //     const updated = await tx.user.update({
-  //       where: { id: UserId },
-  //       data: {
-  //         status: dto.status,
-  //       },
-  //     });
-
-  //     return {
-  //       message: `User ${dto.status === UserStatus.Active ? 'activate' : 'Blocked'} kar diya gaya`,
-  //       user: updated,
-  //     };
-  //   });
-  //
 }

@@ -9,7 +9,6 @@ import {
   UserType,
 } from '@Common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
-// import { UserType } from 'src/generated/prisma/enums';
 @ApiTags('User')
 @ApiBearerAuth()
 @Roles(UserType.USER)
@@ -22,17 +21,13 @@ export class WalletController extends BaseController {
 
   @Get('getWallet')
   async getWallet(@Req() req: AuthenticatedRequest) {
-    // console.log(" req in wallet controller ", req);
-
     const ctx = this.getContext(req);
-    // console.log('this.getContext(req); ', ctx);
     return this.walletService.getWallet(ctx.user.id);
   }
 
   @Get('transactions')
   async getTransactions(@Req() req: AuthenticatedRequest) {
     const ctx = this.getContext(req);
-    // console.log('this.getContext(req); ', ctx);
 
     return this.walletService.getTransactions(ctx.user.id);
   }
