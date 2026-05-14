@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from 'src/prisma';
-import { TransactionType } from '../generated/prisma/client';
+import { TransactionType, UserType } from '../generated/prisma/client';
 @Injectable()
 export class PaymentService {
   constructor(private readonly prisma: PrismaService) {}
@@ -64,5 +64,91 @@ export class PaymentService {
     }
 
     return transactions;
+  }
+
+  async creditManagerShare(managerShare: number, bookingId: number) {
+    return this.prisma.$transaction(async (tx) => {
+      const Booking = await tx.booking.findUnique({
+        where: {
+          id: bookingId,
+        },
+        include: {
+          event: {
+            include: {
+              manager: {
+                include: { wallet: true },
+              },
+            },
+          },
+          transactions: true,
+        },
+      });
+
+      if (!Booking) {
+        throw new Error('booking are  not found ');
+      }
+
+      if (!Booking.event.managerId) {
+        throw new Error('managerId is not  found ');
+      }
+
+      const manager = await tx.user.findUnique({
+        where: { id: Booking.event.managerId },
+      });
+
+      if (!manager) {
+        throw new Error('manager are  not found');
+      }
+
+      if (manager.role !== UserType.MANAGER) {
+        throw new Error('you are not manager ');
+      }
+
+      const updatedManagerWallet = await tx.wallet.update({
+        where: { userId: manager.id },
+        data: {
+          balance: {
+            increment: managerShare,
+          },
+        },
+      });
+
+      if (!updatedManagerWallet) {
+        throw new Error('something went wrong when update a manager wallet ');
+      }
+
+      const managerTransection = await tx.transaction.create({
+        data: {
+          walletId: updatedManagerWallet.id,
+          userId: manager.id,
+          bookingId: bookingId,
+          amount: managerShare,
+          type: TransactionType.CREDIT,
+          description: 'manager  share credited',
+        },
+      });
+
+      if (!managerTransection) {
+        throw new Error(
+          'something went wrong when  create a managerTransection',
+        );
+      }
+      return updatedManagerWallet;
+    });
+  }
+
+  async managerTrasnsection(managerId: number) {
+    const managerTransection = await this.prisma.transaction.findMany({
+      where: { userId: managerId },
+      orderBy: {
+        createdAt: 'desc',
+      },
+    });
+
+    if (!managerTransection) {
+      throw new Error('managerTransection not found ');
+    }
+
+    return managerTransection;
   }
 }

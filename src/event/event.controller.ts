@@ -32,8 +32,6 @@ export class EventController {
     return req.user;
   }
   @Post()
-  @Roles(UserType.ADMIN, UserType.MANAGER)
-  @UseGuards(JwtAuthGuard, AccessGuard, RolesGuard)
   @ApiOperation({ summary: 'Create event' })
   createEvent(@Req() req: AuthenticatedRequest, @Body() dto: CreateEventDto) {
     const ctx = this.getContext(req);

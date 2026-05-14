@@ -95,13 +95,6 @@ export class AdminController extends BaseController {
     return { status: 'success' };
   }
 
-  @Get('admin-Wallet')
-  @Roles(UserType.ADMIN)
-  async adminWallet(@Req() req: AuthenticatedRequest) {
-    const ctx = this.getContext(req);
-    return this.adminService.getAdminWallet(ctx.user.id);
-  }
-
   @Patch('change-role')
   @Roles(UserType.ADMIN)
   @ApiParam({ name: 'role', enum: UserType })
@@ -121,15 +114,5 @@ export class AdminController extends BaseController {
     @Param('status', new ParseEnumPipe(UserStatus)) status: UserStatus,
   ) {
     return await this.adminService.setUserStatus(userId, status);
-  }
-
-  @ApiBearerAuth()
-  @Get('adminTotalEerning')
-  @Roles(UserType.ADMIN)
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  totalEarnings(@Req() req: AuthenticatedRequest) {
-    const ctx = this.getContext(req);
-
-    return this.adminService.TotalEarning(ctx.user.id);
   }
 }

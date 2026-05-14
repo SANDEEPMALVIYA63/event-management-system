@@ -18,11 +18,21 @@ import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 export class ReportController {
   constructor(private readonly reportService: ReportService) {}
 
+  @Roles(UserType.ADMIN)
+  @Get('adminTotalEerning')
+  totalEarnings(@Req() req: AuthenticatedRequest) {
+    return this.reportService.TotalEarning(req.user.id);
+  }
+
+  @Roles(UserType.ADMIN)
+  @Get('admin-Wallet')
+  async adminWallet(@Req() req: AuthenticatedRequest) {
+    return this.reportService.getAdminWallet(req.user.id);
+  }
+
+  @Roles(UserType.MANAGER && UserType.ADMIN)
   @Get('ManagerTotalEarning')
-  getRevenueReport(
-    @Req() req: AuthenticatedRequest,
-    // @Query() dto: ReportQueryDto,
-  ) {
+  getRevenueReport(@Req() req: AuthenticatedRequest) {
     return this.reportService.getRevenueReport(req.user.id, req.user.type);
   }
 

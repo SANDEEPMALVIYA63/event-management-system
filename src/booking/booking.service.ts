@@ -261,6 +261,7 @@ export class BookingService {
         },
       });
       await this.PaymentService.creditAdminShare(adminShare, booking.id);
+      await this.PaymentService.creditManagerShare(managerShare, booking.id);
       return {
         message: 'Booking confirmed successfully',
         booking: updatedBooking,
