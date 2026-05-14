@@ -23,6 +23,12 @@ export class ReportController {
     @Req() req: AuthenticatedRequest,
     // @Query() dto: ReportQueryDto,
   ) {
-    return this.reportService.getRevenueReport(req.user.id);
+    return this.reportService.getRevenueReport(req.user.id, req.user.type);
+  }
+
+  @Roles(UserType.MANAGER)
+  @Get('ManagerWallet')
+  getManagerWallet(@Req() req: AuthenticatedRequest) {
+    return this.reportService.getManagerWallet(req.user.id);
   }
 }
