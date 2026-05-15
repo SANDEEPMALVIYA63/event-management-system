@@ -12,7 +12,7 @@ import {
 } from '@Common';
 @ApiTags('Report')
 @ApiBearerAuth()
-@Roles(UserType.ADMIN || UserType.MANAGER)
+@Roles(UserType.ADMIN, UserType.MANAGER)
 @UseGuards(JwtAuthGuard, AccessGuard, RolesGuard)
 @Controller('payment')
 export class PaymentController extends BaseController {

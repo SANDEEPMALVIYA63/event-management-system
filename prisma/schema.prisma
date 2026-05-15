@@ -170,17 +170,16 @@ model Event {
  }
 
 model Booking {
-  id         Int     @id @default(autoincrement())
-  userId     Int     @map("user_id")
-  eventId    Int     @map("event_id")
-  quantity   Int
-  totalPrice Decimal @db.Decimal(10, 2)
+  id                 Int                    @id @default(autoincrement())
+  userId             Int                    @map("user_id")
+  eventId            Int                    @map("event_id")
+  quantity           Int
+  totalPrice         Decimal                @db.Decimal(10, 2)
+  status             BookingStatus
+  holdExpiresAt      DateTime?              @map("hold_expires_at")
 
-  status        BookingStatus
-  holdExpiresAt DateTime?     @map("hold_expires_at")
-
-  user  User  @relation(fields: [userId], references: [id])
-  event Event @relation(fields: [eventId], references: [id])
+  user               User                   @relation(fields: [userId], references: [id])
+  event              Event                  @relation(fields: [eventId], references: [id])
 
   revenueShare      RevenueShare?
   transactions      Transaction[]      @relation("BookingToTransaction")
@@ -194,7 +193,7 @@ model Booking {
 }
 
 model RevenueShare {
-  id String @id @default(cuid())
+  id String @id @default(autoincrement())
 
   bookingId Int  @unique
   eventId   Int

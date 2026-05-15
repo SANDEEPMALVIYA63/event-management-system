@@ -30,7 +30,7 @@ export class ReportController {
     return this.reportService.getAdminWallet(req.user.id);
   }
 
-  @Roles(UserType.MANAGER && UserType.ADMIN)
+  @Roles(UserType.MANAGER, UserType.ADMIN)
   @Get('ManagerTotalEarning')
   getRevenueReport(@Req() req: AuthenticatedRequest) {
     return this.reportService.getRevenueReport(req.user.id, req.user.type);

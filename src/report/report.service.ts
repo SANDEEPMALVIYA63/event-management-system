@@ -87,7 +87,7 @@ export class ReportService {
     });
 
     if (!adminWallet) {
-      throw new Error('admin wallet not found ');
+      throw new Error('admin wallet are  not found ');
     }
 
     return {

@@ -55,7 +55,10 @@ export class EventService {
         manager: { connect: { id: ctx.id } },
       },
     });
-    return event;
+    return {
+      messaghe: 'event create successFully',
+      event,
+    };
   }
 
   // async updateEvent(

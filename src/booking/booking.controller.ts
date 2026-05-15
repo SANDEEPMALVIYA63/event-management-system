@@ -1,8 +1,7 @@
 import { Controller, UseGuards, Post, Req, Body } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags, ApiOperation } from '@nestjs/swagger';
 import { BookingService } from './booking.service';
-import { CreateBookingDto } from './dto/create-booking-request.dto';
-import { ConfirmBookingDto } from './dto/confirm-booking-request.dto';
+import { ConfirmBookingDto, CreateBookingDto } from './dto';
 import {
   AccessGuard,
   AuthenticatedRequest,
