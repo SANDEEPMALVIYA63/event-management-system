@@ -2,59 +2,70 @@ import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma';
 import { CreateEventDto } from './dto/create-event-request.dto';
 import { EventStatus } from 'src/generated/prisma/enums';
-import { AuthenticatedUser, UserType } from '@Common';
+import { AuthenticatedUser, formatTimeHHMM } from '@Common';
 import { UpdateEventStatusDto } from './dto/UpdateEventStatusDto-request.dto';
-
+import {
+  assertAdminOrManager,
+  buildEventDateTimes,
+  validateEventTimes,
+  validateCapacity,
+  findVenueConflict,
+} from './helper';
 @Injectable()
 export class EventService {
   constructor(private readonly prisma: PrismaService) {}
 
   async createEvent(ctx: AuthenticatedUser, dto: CreateEventDto) {
-    const startTime = new Date(`${dto.eventDate}T${dto.startTime}:00.000Z`);
-    const endTime = new Date(`${dto.eventDate}T${dto.endTime}:00.000Z`);
+    assertAdminOrManager(ctx);
+    const { startTime, endTime } = buildEventDateTimes(
+      dto.eventDate,
+      dto.startTime,
+      dto.endTime,
+    );
 
-    console.log(`startTime ${startTime} endTime${endTime} `);
+    validateEventTimes(startTime, endTime);
 
-    if (isNaN(startTime.getTime()) || isNaN(endTime.getTime())) {
-      throw new Error('Invalid date or time format');
-    }
+    validateCapacity(dto.maxTickets, dto.venueTotalCapacity);
 
-    if (startTime >= endTime) {
-      throw new Error('endTime must be after startTime');
-    }
-
-    if (dto.maxTickets > dto.venueTotalCapacity) {
-      throw new Error(
-        `maxTickets (${dto.maxTickets}) cannot exceed venueTotalCapacity (${dto.venueTotalCapacity})`,
-      );
-    }
-
-    if (ctx.type !== UserType.ADMIN && ctx.type !== UserType.MANAGER) {
-      throw new Error('only admin and manager allow ');
-    }
-    const event = await this.prisma.event.create({
-      data: {
-        title: dto.title,
-        type: dto.type,
-        description: dto.description,
-        eventDate: dto.eventDate,
+    const event = await this.prisma.$transaction(async (tx) => {
+      const existingEvent = await findVenueConflict(
+        tx,
+        dto,
         startTime,
         endTime,
-        performers: dto.performers,
-        ticketPrice: dto.ticketPrice,
-        maxTickets: dto.maxTickets,
-        ticketsSold: 0,
-        status: EventStatus.ACTIVE,
-        venueName: dto.venueName,
-        venueAddress: dto.venueAddress,
-        venueCity: dto.venueCity,
-        venueState: dto.venueState,
-        venueCountry: dto.venueCountry,
-        venueTotalCapacity: dto.venueTotalCapacity,
+      );
 
-        manager: { connect: { id: ctx.id } },
-      },
+      if (existingEvent) {
+        throw new Error(
+          `This venue already has an event from date ${existingEvent.eventDate} time  ${formatTimeHHMM(existingEvent.startTime)} to ${formatTimeHHMM(existingEvent.endTime)}Please choose a different time.`,
+        );
+      }
+
+      return await tx.event.create({
+        data: {
+          title: dto.title,
+          type: dto.type,
+          description: dto.description,
+          eventDate: dto.eventDate,
+          startTime,
+          endTime,
+          performers: dto.performers,
+          ticketPrice: dto.ticketPrice,
+          maxTickets: dto.maxTickets,
+          ticketsSold: 0,
+          status: EventStatus.ACTIVE,
+          venueName: dto.venueName,
+          venueAddress: dto.venueAddress,
+          venueCity: dto.venueCity,
+          venueState: dto.venueState,
+          venueCountry: dto.venueCountry,
+          venueTotalCapacity: dto.venueTotalCapacity,
+
+          manager: { connect: { id: ctx.id } },
+        },
+      });
     });
+
     return {
       messaghe: 'event create successFully',
       event,
@@ -175,13 +186,6 @@ export class EventService {
             email: true,
           },
         },
-        // bookings: {
-        //   select: {
-        //     id: true,
-        //     quantity: true,
-        //     totalAmount: true,
-        //   },
-        // },
       },
     });
 
@@ -192,12 +196,16 @@ export class EventService {
     return {
       success: true,
       message: 'Event fetched successfully',
-      data: event,
+      data: {
+        ...event,
+        startTime: formatTimeHHMM(event.startTime),
+        endTime: formatTimeHHMM(event.endTime),
+      },
     };
   }
 
   async findAllEvents() {
-    const event = this.prisma.event.findMany({
+    const events = await this.prisma.event.findMany({
       orderBy: {
         createdAt: 'desc',
       },
@@ -212,12 +220,21 @@ export class EventService {
         },
       },
     });
+    console.log('event', events);
 
-    if (!event) {
+    if (!events) {
       throw new Error('event is not found ');
     }
 
-    return event;
+    return {
+      success: true,
+      message: 'Event fetched successfully',
+      data: events.map((event) => ({
+        ...event,
+        startTime: formatTimeHHMM(event.startTime),
+        endTime: formatTimeHHMM(event.endTime),
+      })),
+    };
   }
 
   async updateEventStatus(

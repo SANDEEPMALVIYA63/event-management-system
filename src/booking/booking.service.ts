@@ -4,7 +4,6 @@ import { PrismaService } from '../prisma';
 import {
   BookingStatus,
   RevenueStatus,
-  EventStatus,
   TransactionType,
 } from 'src/generated/prisma/enums';
 import { ConfirmBookingDto, CreateBookingDto } from './dto';
@@ -12,6 +11,12 @@ import { ConfigType } from '@nestjs/config';
 import { appConfigFactory } from '@Config';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { PaymentService } from '../payment/payment.service';
+import {
+  calculateHoldExpiry,
+  calculateTotalPrice,
+  assertEventBookable,
+  getTodayRange,
+} from './helpers';
 @Injectable()
 export class BookingService {
   private readonly logger = new Logger(BookingService.name);
@@ -36,7 +41,6 @@ export class BookingService {
         status: BookingStatus.EXPIRED,
       },
     });
-
     if (result.count > 0) {
       this.logger.log(`${result.count} expired holds release kiye`);
     }
@@ -47,29 +51,16 @@ export class BookingService {
       const event = await tx.event.findUnique({
         where: { id: dto.eventId },
       });
-
-      if (!event) {
-        throw new Error('Event not found');
-      }
-
-      if (event.status !== EventStatus.ACTIVE) {
-        throw new Error('Event is not active');
-      }
-
+      if (!event) throw new Error('Event not found');
       const now = new Date();
-      if (event.startTime <= now) {
-        throw new Error('Event already started');
-      }
+
+      assertEventBookable(event, now);
 
       if (dto.quantity <= 0) {
         throw new Error('Invalid quantity');
       }
 
-      const todayStart = new Date();
-      todayStart.setHours(0, 0, 0, 0);
-
-      const todayEnd = new Date();
-      todayEnd.setHours(23, 59, 59, 999);
+      const { todayStart, todayEnd } = getTodayRange();
 
       const todayBookings = await tx.booking.aggregate({
         _sum: { quantity: true },
@@ -107,11 +98,10 @@ export class BookingService {
       }
 
       const price = Number(event.ticketPrice);
-      const totalPrice = dto.quantity * price;
+      const totalPrice = calculateTotalPrice(dto.quantity, price);
 
       const holdMinutes = this.appConfig.holdMinutes as number;
-      const holdExpiresAt = new Date(Date.now() + holdMinutes * 60 * 1000);
-
+      const holdExpiresAt = calculateHoldExpiry(holdMinutes);
       const booking = await tx.booking.create({
         data: {
           userId: ctx.id,

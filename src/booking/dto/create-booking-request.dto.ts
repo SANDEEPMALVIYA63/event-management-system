@@ -4,10 +4,10 @@ import { IsInt, Min } from 'class-validator';
 export class CreateBookingDto {
   @ApiProperty({ example: 1 })
   @IsInt()
-  eventId: number;
+  eventId!: number;
 
   @ApiProperty({ example: 2 })
   @IsInt()
   @Min(1)
-  quantity: number;
+  quantity!: number;
 }

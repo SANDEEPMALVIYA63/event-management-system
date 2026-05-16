@@ -10,16 +10,16 @@ import {
   IsNumber,
   Min,
   Matches,
+  IsOptional,
   Length,
 } from 'class-validator';
 import { EventType } from 'src/generated/prisma/enums';
 
 export class CreateEventDto {
-  @ApiProperty()
+  @ApiProperty({ example: 'Coldplay Live in Mumbai', maxLength: 100 })
   @IsNotEmpty()
   @IsString()
-  @IsNotEmpty()
-  @Length(1, 100)
+  @Length(3, 100)
   title!: string;
 
   @ApiProperty({ enum: EventType })
@@ -27,13 +27,17 @@ export class CreateEventDto {
   @IsEnum(EventType)
   type!: EventType;
 
+  @ApiProperty({ example: ' this is comedy show ', maxLength: 500 })
+  @IsOptional()
   @IsString()
-  @ApiProperty()
   @IsNotEmpty()
   @Length(1, 200)
   description?: string;
 
-  @ApiProperty()
+  @ApiProperty({
+    example: '2025-12-25',
+    description: 'ISO date string YYYY-MM-DD',
+  })
   @IsDateString()
   @IsNotEmpty()
   eventDate!: string;
@@ -50,36 +54,36 @@ export class CreateEventDto {
   })
   endTime!: string;
 
-  @ApiProperty()
+  @ApiProperty({ example: 'Abhishek Upmanue ' })
   @IsString()
   @IsNotEmpty()
   @Length(1, 50)
   performers!: string;
 
-  @ApiProperty()
-  @IsNumber()
+  @ApiProperty({ example: 999.99, description: 'Ticket price in INR' })
+  @IsNumber({ maxDecimalPlaces: 2 })
   @IsNotEmpty()
   ticketPrice!: number;
 
-  @ApiProperty()
+  @ApiProperty({ example: 5000, description: 'Max tickets available for sale' })
   @IsInt()
   @Min(1)
   @IsNotEmpty()
   maxTickets!: number;
 
-  @ApiProperty()
+  @ApiProperty({ example: 'Indore Stadium ' })
   @IsString()
   @IsNotEmpty()
   @Length(1, 50)
   venueName!: string;
 
-  @ApiProperty()
+  @ApiProperty({ example: '  new palacia  indore ' })
   @IsString()
   @IsNotEmpty()
-  @Length(1, 100)
+  @Length(1, 200)
   venueAddress!: string;
 
-  @ApiProperty()
+  @ApiProperty({ example: 'indore' })
   @IsString()
   @IsNotEmpty()
   @Length(1, 50)
@@ -88,7 +92,7 @@ export class CreateEventDto {
   @ApiProperty()
   @IsString()
   @IsNotEmpty()
-  @Length(1, 50)
+  @Length(1, 60)
   venueState!: string;
 
   @ApiProperty()
@@ -97,7 +101,10 @@ export class CreateEventDto {
   @Length(1, 50)
   venueCountry: string = 'IN';
 
-  @ApiProperty()
+  @ApiProperty({
+    example: 10000,
+    description: 'Total physical capacity of the venue',
+  })
   @IsInt()
   @Min(1)
   @IsNotEmpty()
