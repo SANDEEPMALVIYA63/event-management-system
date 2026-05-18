@@ -16,6 +16,7 @@ import {
   calculateTotalPrice,
   assertEventBookable,
   getTodayRange,
+  bookingExpired,
 } from './helpers';
 @Injectable()
 export class BookingService {
@@ -48,9 +49,10 @@ export class BookingService {
 
   async createBooking(ctx: AuthenticatedUser, dto: CreateBookingDto) {
     return await this.prisma.$transaction(async (tx) => {
-      const event = await tx.event.findUnique({
-        where: { id: dto.eventId },
-      });
+      const events: any[] =
+        await tx.$queryRaw`SELECT * FROM "Event" WHERE id = ${dto.eventId} FOR UPDATE`;
+
+      const event = events[0];
       if (!event) throw new Error('Event not found');
       const now = new Date();
 
@@ -151,13 +153,10 @@ export class BookingService {
         throw new Error('Invalid booking status');
       }
 
-      const isExpired =
-        !booking.holdExpiresAt || booking.holdExpiresAt < new Date();
-
+      const isExpired = await bookingExpired(booking);
       if (isExpired) {
         throw new Error('Hold expired');
       }
-
       const totalBooked = await tx.booking.aggregate({
         _sum: { quantity: true },
         where: {
@@ -165,17 +164,22 @@ export class BookingService {
           status: BookingStatus.CONFIRMED,
         },
       });
-
+      // await totalConfirmed(totalBooked, booking);
       const totalConfirmed = totalBooked._sum.quantity || 0;
 
       if (totalConfirmed + booking.quantity > booking.event.maxTickets) {
         throw new Error('Tickets sold out');
       }
-      if (!booking.user.wallet) {
+
+      const wallets: any[] = await tx.$queryRaw`
+      SELECT * FROM "Wallet" WHERE "userId" = ${ctx.id} FOR UPDATE
+    `;
+      const wallet = wallets[0];
+      if (!wallet) {
         throw new Error('Wallet not found');
       }
 
-      const walletBalance = Number(booking.user.wallet.balance);
+      const walletBalance = Number(wallet.balance);
       const totalPrice = Number(booking.totalPrice);
 
       if (walletBalance < totalPrice) {
@@ -194,7 +198,7 @@ export class BookingService {
       const transaction = await tx.transaction.create({
         data: {
           userId: booking.userId,
-          walletId: booking.user.wallet.id,
+          walletId: wallet.id,
           bookingId: booking.id,
           amount: booking.totalPrice.toNumber(),
           type: TransactionType.DEBIT,
@@ -250,8 +254,16 @@ export class BookingService {
           status: RevenueStatus.SETTLED,
         },
       });
-      await this.PaymentService.creditAdminShare(adminShare, booking.id);
-      await this.PaymentService.creditManagerShare(managerShare, booking.id);
+
+      try {
+        await this.PaymentService.creditAdminShare(adminShare, booking.id);
+        await this.PaymentService.creditManagerShare(managerShare, booking.id);
+      } catch (error) {
+        throw new Error(
+          `Revenue credit failed for booking ${dto.bookingId}: ${error}`,
+        );
+      }
+
       return {
         message: 'Booking confirmed successfully',
         booking: updatedBooking,

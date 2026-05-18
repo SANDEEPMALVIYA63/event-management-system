@@ -37,7 +37,7 @@ export class EventService {
 
       if (existingEvent) {
         throw new Error(
-          `This venue already has an event from date ${existingEvent.eventDate} time  ${formatTimeHHMM(existingEvent.startTime)} to ${formatTimeHHMM(existingEvent.endTime)}Please choose a different time.`,
+          `This venue already has an event from date ${existingEvent.eventDate} time  ${formatTimeHHMM(existingEvent.startTime)} to ${formatTimeHHMM(existingEvent.endTime)}  Please choose a different time.`,
         );
       }
 
@@ -67,7 +67,7 @@ export class EventService {
     });
 
     return {
-      messaghe: 'event create successFully',
+      message: 'event create successFully',
       event,
     };
   }
@@ -220,7 +220,6 @@ export class EventService {
         },
       },
     });
-    console.log('event', events);
 
     if (!events) {
       throw new Error('event is not found ');

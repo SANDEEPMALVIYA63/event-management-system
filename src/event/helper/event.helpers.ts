@@ -12,8 +12,8 @@ export function buildEventDateTimes(
   startTimeStr: string,
   endTimeStr: string,
 ) {
-  const startTime = new Date(`${eventDate}T${startTimeStr}:00.000Z`);
-  const endTime = new Date(`${eventDate}T${endTimeStr}:00.000Z`);
+  const startTime = new Date(`${eventDate}T${startTimeStr}:00.000`);
+  const endTime = new Date(`${eventDate}T${endTimeStr}:00.000`);
 
   if (isNaN(startTime.getTime())) {
     throw new Error(

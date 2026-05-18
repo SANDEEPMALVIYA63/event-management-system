@@ -193,7 +193,7 @@ model Booking {
 }
 
 model RevenueShare {
-  id String @id @default(autoincrement())
+  id  Int @id @default(autoincrement())
 
   bookingId Int  @unique
   eventId   Int

@@ -9,10 +9,10 @@ export function assertAdminOrManager(ctx: AuthenticatedUser) {
 export function validateEventTimes(startTime: Date, endTime: Date) {
   const now = new Date();
 
-  if (startTime <= now) {
-    throw new Error('Event startTime must be in the future');
+  if (startTime.getTime() <= now.getTime()) {
+    throw new Error('Event startTime and date must be in the past ');
   }
-  if (startTime >= endTime) {
+  if (startTime.getTime() >= endTime.getTime()) {
     throw new Error('endTime must be after startTime');
   }
 
